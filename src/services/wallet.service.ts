@@ -1,7 +1,6 @@
 import { ethers, HDNodeWallet } from 'ethers';
 import * as dotenv from 'dotenv';
 import { WalletRepository } from '../repositories/wallet.repository';
-import { initializeDataSource } from '../data-source';
 
 dotenv.config();
 
@@ -13,24 +12,21 @@ export interface WalletInfo {
 export class WalletService {
     private provider: ethers.JsonRpcProvider;
     private wallets: Map<string, HDNodeWallet>;
+    private walletRepository: WalletRepository;
     private baseHDPath: string = "m/44'/60'/0'/0/";
     private defaultSeedPhrase: string;
-    private walletRepository: WalletRepository;
 
-    constructor(rpcUrl: string = process.env.RPC_URL || 'http://localhost:8545') {
-        this.provider = new ethers.JsonRpcProvider(rpcUrl);
+    constructor() {
+        if (!process.env.SEED_PHRASE) {
+            throw new Error('SEED_PHRASE environment variable is required');
+        }
+
+        this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
         this.wallets = new Map();
         this.walletRepository = new WalletRepository();
         
         // Get seed phrase from environment variable
         this.defaultSeedPhrase = process.env.SEED_PHRASE || '';
-        if (!this.defaultSeedPhrase) {
-            throw new Error('SEED_PHRASE environment variable is required');
-        }
-    }
-
-    async initialize() {
-        await initializeDataSource();
     }
 
     /**

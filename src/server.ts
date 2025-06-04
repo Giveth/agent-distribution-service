@@ -1,32 +1,22 @@
 import express, { Request, Response, Router } from 'express';
 import { WalletService } from './services/wallet.service';
-import * as dotenv from 'dotenv';
-
-dotenv.config();
-
-// Validate environment variables
-if (!process.env.SEED_PHRASE) {
-    console.error('SEED_PHRASE environment variable is required');
-    process.exit(1);
-}
-
-if (!process.env.DB_USER || !process.env.DB_PASSWORD || !process.env.DB_NAME) {
-    console.error('Database environment variables are required');
-    process.exit(1);
-}
+import { config } from './config';
+import { initializeDataSource } from './data-source';
 
 const app = express();
 const router = Router();
-const port = process.env.PORT || 3000;
 const walletService = new WalletService();
 
-// Initialize database connection
-walletService.initialize().catch(error => {
-    console.error('Failed to initialize database:', error);
-    process.exit(1);
-});
-
-app.use(express.json());
+// Initialize database connection and wallet service
+async function initialize() {
+    try {
+        await initializeDataSource();
+        console.log('Database connection initialized');
+    } catch (error) {
+        console.error('Failed to initialize:', error);
+        process.exit(1);
+    }
+}
 
 interface GenerateWalletRequest {
     index?: number;
@@ -55,9 +45,19 @@ router.get('/wallets', (req: Request, res: Response) => {
         }));
 });
 
+// Basic health check endpoint
+app.get('/health', (req: Request, res: Response) => {
+    res.json({ status: 'ok' });
+});
+
 // Mount the router
 app.use('/api/wallet', router);
 
-app.listen(port, () => {
-    console.log(`Server is running on port ${port}`);
-}); 
+export async function startServer() {
+    await initialize();
+    
+    const { port, host } = config.server;
+    app.listen(port, host, () => {
+        console.log(`Server running at http://${host}:${port}`);
+    });
+} 
