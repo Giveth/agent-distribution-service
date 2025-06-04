@@ -1,6 +1,7 @@
 import { ethers, HDNodeWallet } from 'ethers';
 import * as dotenv from 'dotenv';
-import { DatabaseService } from './services/DatabaseService';
+import { WalletRepository } from '../repositories/wallet.repository';
+import { initializeDataSource } from '../data-source';
 
 dotenv.config();
 
@@ -14,12 +15,12 @@ export class WalletService {
     private wallets: Map<string, HDNodeWallet>;
     private baseHDPath: string = "m/44'/60'/0'/0/";
     private defaultSeedPhrase: string;
-    private dbService: DatabaseService;
+    private walletRepository: WalletRepository;
 
     constructor(rpcUrl: string = process.env.RPC_URL || 'http://localhost:8545') {
         this.provider = new ethers.JsonRpcProvider(rpcUrl);
         this.wallets = new Map();
-        this.dbService = new DatabaseService();
+        this.walletRepository = new WalletRepository();
         
         // Get seed phrase from environment variable
         this.defaultSeedPhrase = process.env.SEED_PHRASE || '';
@@ -29,7 +30,7 @@ export class WalletService {
     }
 
     async initialize() {
-        await this.dbService.initialize();
+        await initializeDataSource();
     }
 
     /**
@@ -44,7 +45,7 @@ export class WalletService {
             this.wallets.set(wallet.address, wallet);
 
             // Save wallet to database
-            await this.dbService.saveWallet(
+            await this.walletRepository.saveWallet(
                 wallet.address,
                 hdPath,
             );
@@ -107,7 +108,7 @@ export class WalletService {
      */
     async getManagedWallets(): Promise<WalletInfo[]> {
         try {
-            const wallets = await this.dbService.getAllWallets();
+            const wallets = await this.walletRepository.findAll();
             return wallets.map(wallet => ({
                 address: wallet.address,
                 hdPath: wallet.hdPath

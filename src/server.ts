@@ -1,5 +1,5 @@
 import express, { Request, Response, Router } from 'express';
-import { WalletService } from './WalletService';
+import { WalletService } from './services/wallet.service';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
