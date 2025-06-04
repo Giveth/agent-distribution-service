@@ -13,7 +13,7 @@ export const AppDataSource = new DataSource({
     synchronize: config.database.synchronize,
     logging: config.database.logging,
     entities: [Wallet],
-    migrations: [path.join(__dirname, 'migrations/*.{ts,js}')],
+    migrations: [path.join(__dirname, '../migrations/*.{ts,js}')],
     migrationsRun: config.environment === 'development',
     subscribers: [],
 });

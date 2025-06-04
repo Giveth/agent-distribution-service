@@ -26,23 +26,32 @@ interface GenerateMultipleWalletsRequest {
     count: number;
 }
 
+// Add JSON parsing middleware
+app.use(express.json());
+
 // Generate a single wallet
-router.post('/generate', (req: Request<{}, {}, GenerateWalletRequest>, res: Response) => {
-    const { index } = req.body;
-    walletService.generateWallet(index)
-        .then(wallet => res.json(wallet))
-        .catch(error => res.status(500).json({
+router.post('/generate', async (req: Request<{}, {}, GenerateWalletRequest>, res: Response) => {
+    try {
+        const { index = 0 } = req.body;
+        const wallet = await walletService.generateWallet(index);
+        res.json(wallet);
+    } catch (error) {
+        res.status(500).json({
             error: error instanceof Error ? error.message : 'Unknown error'
-        }));
+        });
+    }
 });
 
 // Get all wallets
-router.get('/wallets', (req: Request, res: Response) => {
-    walletService.getManagedWallets()
-        .then(wallets => res.json(wallets))
-        .catch(error => res.status(500).json({
+router.get('/wallets', async (req: Request, res: Response) => {
+    try {
+        const wallets = await walletService.getManagedWallets();
+        res.json(wallets);
+    } catch (error) {
+        res.status(500).json({
             error: error instanceof Error ? error.message : 'Unknown error'
-        }));
+        });
+    }
 });
 
 // Basic health check endpoint
