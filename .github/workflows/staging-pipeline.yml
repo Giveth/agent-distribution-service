@@ -3,10 +3,10 @@ name: staging-pipeline
 on:
   push:
     branches:
-      - develop
+      - staging
   pull_request:
     branches:
-      - develop
+      - staging
 
 jobs:
   publish:
@@ -45,6 +45,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd agent-distribution-service
+            git checkout staging
             docker compose down
             docker compose pull
             docker compose -f docker-compose-staging.yml up -d agent-distribution-service
