@@ -46,6 +46,7 @@ jobs:
           script: |
             cd agent-distribution-service
             git checkout staging
+            git pull
             docker compose down
             docker compose pull
             docker compose -f docker-compose-staging.yml up -d agent-distribution-service
