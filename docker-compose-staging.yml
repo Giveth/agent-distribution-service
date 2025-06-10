@@ -1,0 +1,8 @@
+services:
+  agent-distribution-service:
+    image: ghcr.io/giveth/agent-distribution-service:staging
+    container_name: agent-distribution-service
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
