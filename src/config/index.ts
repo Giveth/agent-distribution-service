@@ -19,11 +19,7 @@ export const config: AppConfig = {
     host: process.env.HOST || baseConfig.server.host,
   },
   database: {
-    host: process.env.DB_HOST || baseConfig.database.host,
-    port: Number(process.env.DB_PORT) || baseConfig.database.port,
-    username: process.env.DB_USER || baseConfig.database.username,
-    password: process.env.DB_PASSWORD || baseConfig.database.password,
-    database: process.env.DB_NAME || baseConfig.database.database,
+    connectionString: process.env.DATABASE_CONNECTION_STRING || baseConfig.database.connectionString,
     synchronize: baseConfig.database.synchronize,
     logging: baseConfig.database.logging,
   },

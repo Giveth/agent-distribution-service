@@ -6,11 +6,7 @@ export const developmentConfig: AppConfig = {
     host: 'localhost',
   },
   database: {
-    host: 'localhost',
-    port: 5432,
-    username: 'postgres',
-    password: 'postgres',
-    database: 'wallet_db',
+    connectionString: 'postgresql://postgres:postgres@localhost:5432/wallet_db',
     synchronize: false,
     logging: true,
   },

@@ -4,11 +4,7 @@ export interface ServerConfig {
 }
 
 export interface DatabaseConfig {
-  host: string;
-  port: number;
-  username: string;
-  password: string;
-  database: string;
+  connectionString: string;
   synchronize: boolean;
   logging: boolean;
 }
