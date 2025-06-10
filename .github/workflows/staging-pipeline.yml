@@ -30,7 +30,6 @@ jobs:
           repository: giveth/agent-distribution-service
           tags: |
             ghcr.io/giveth/agent-distribution-service:staging
-            ghcr.io/giveth/agent-distribution-service:${{ github.sha }}
 
   deploy:
     needs: publish

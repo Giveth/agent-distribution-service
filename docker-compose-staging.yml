@@ -6,6 +6,3 @@ services:
       - "3000:3000"
     env_file:
       - .env
-    volumes:
-      - .:/usr/src/app
-      - /usr/src/app/node_modules
