@@ -1,0 +1,52 @@
+name: staging-pipeline
+
+on:
+  push:
+    branches:
+      - staging
+  pull_request:
+    branches:
+      - staging
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Login to GitHub Container Registry
+        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Build image and push to GitHub Packages
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          no-cache: true
+          repository: giveth/agent-distribution-service
+          tags: |
+            ghcr.io/giveth/agent-distribution-service:staging
+            ghcr.io/giveth/agent-distribution-service:${{ github.sha }}
+
+  deploy:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and Redeploy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.STAGING_HOST }}
+          username: ${{ secrets.STAGING_USERNAME }}
+          key: ${{ secrets.STAGING_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd agent-distribution-service
+            git checkout staging
+            docker compose down
+            docker compose pull
+            docker compose -f docker-compose-staging.yml up -d agent-distribution-service
+            docker image prune -a --force
