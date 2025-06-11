@@ -4,26 +4,23 @@ import { config } from './config';
 import path from 'path';
 import fs from 'fs';
 
-const baseConnectionString = config.database.connectionString;
-
-const caCertPath = path.join(process.cwd(), 'certs', 'db-ca-certificate.crt');
-
-let finalConnectionString = baseConnectionString;
-
-if (config.environment === 'production') {
-    finalConnectionString = baseConnectionString.replace('sslmode=require', '');
-    finalConnectionString = `${finalConnectionString}sslmode=verify-full&sslrootcert=${caCertPath}`;
-}
-
 export const AppDataSource = new DataSource({
     type: 'postgres',
-    url: finalConnectionString,
+    host: config.database.host,
+    port: config.database.port,
+    username: config.database.username,
+    password: config.database.password,
+    database: config.database.database,
     synchronize: config.database.synchronize,
     logging: config.database.logging,
     entities: [Wallet],
     migrations: [path.join(__dirname, '../migrations/*.{ts,js}')],
     migrationsRun: config.environment === 'development',
     subscribers: [],
+    ssl: {
+        rejectUnauthorized: true,
+        ca: fs.readFileSync(path.join(process.cwd(), 'certs', 'db-ca-certificate.crt'))
+    }
 });
 
 // Initialize the data source

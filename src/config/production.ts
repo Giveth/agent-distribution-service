@@ -6,7 +6,11 @@ export const productionConfig: AppConfig = {
     host: '0.0.0.0',
   },
   database: {
-    connectionString: 'postgresql://postgres:postgres@localhost:5432/wallet_db',
+    host: 'localhost',
+    port: 5432,
+    username: 'postgres',
+    password: 'postgres',
+    database: 'wallet_db',
     synchronize: false,
     logging: false,
   },
