@@ -12,6 +12,9 @@ export const AppDataSource = new DataSource({
     migrations: [path.join(__dirname, '../migrations/*.{ts,js}')],
     migrationsRun: config.environment === 'development',
     subscribers: [],
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 
 // Initialize the data source
