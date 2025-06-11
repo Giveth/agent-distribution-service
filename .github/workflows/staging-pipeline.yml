@@ -50,3 +50,4 @@ jobs:
             docker compose -f docker-compose-staging.yml pull
             docker compose -f docker-compose-staging.yml up -d agent-distribution-service
             docker image prune -a --force
+            docker logs agent-distribution-service
