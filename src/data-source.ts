@@ -2,6 +2,7 @@ import { DataSource } from 'typeorm';
 import { Wallet } from './entities/Wallet';
 import { config } from './config';
 import path from 'path';
+import fs from 'fs';
 
 export const AppDataSource = new DataSource({
     type: 'postgres',
@@ -12,7 +13,10 @@ export const AppDataSource = new DataSource({
     migrations: [path.join(__dirname, '../migrations/*.{ts,js}')],
     migrationsRun: config.environment === 'development',
     subscribers: [],
-    ssl: {
+    ssl: config.environment === 'production' ? {
+        rejectUnauthorized: true,
+        ca: fs.readFileSync(path.join(process.cwd(), 'certs', 'db-ca-certificate.crt'))
+    } : {
         rejectUnauthorized: false
     }
 });
