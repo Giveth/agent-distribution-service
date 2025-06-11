@@ -1,5 +1,5 @@
-# Use Node.js LTS version with specific version tag
-FROM node:20.11.1-alpine
+ # Use Node.js 18 LTS version (more lenient SSL handling)
+ FROM node:18.19.0-alpine
 
 # Create app directory
 WORKDIR /usr/src/app
