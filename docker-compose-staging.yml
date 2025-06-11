@@ -9,4 +9,6 @@ services:
     networks:
       - agent-distribution-service
 
-networks: agent-distribution-service
+networks:
+  agent-distribution-service:
+    external: true
