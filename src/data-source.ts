@@ -11,9 +11,8 @@ const caCertPath = path.join(process.cwd(), 'certs', 'db-ca-certificate.crt');
 let finalConnectionString = baseConnectionString;
 
 if (config.environment === 'production') {
-    const separator = baseConnectionString.includes('?') ? '&' : '?';
     finalConnectionString = baseConnectionString.replace('sslmode=require', '');
-    finalConnectionString = `${finalConnectionString}${separator}sslmode=verify-full&sslrootcert=${caCertPath}`;
+    finalConnectionString = `${finalConnectionString}sslmode=verify-full&sslrootcert=${caCertPath}`;
 }
 
 export const AppDataSource = new DataSource({
