@@ -22,9 +22,9 @@ export const AppDataSource = new DataSource({
       ? false
       : {
           rejectUnauthorized: false,
-          ca: fs.readFileSync(
-            path.join(process.cwd(), "certs", "db-ca-certificate.crt")
-          ),
+          // ca: fs.readFileSync(
+          //   path.join(process.cwd(), "certs", "db-ca-certificate.crt")
+          // ),
         },
 });
 
