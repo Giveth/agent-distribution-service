@@ -1,6 +1,7 @@
 export interface ServerConfig {
   port: number;
   host: string;
+  allowedIPs: string[];  // Array of allowed IP addresses
 }
 
 export interface DatabaseConfig {

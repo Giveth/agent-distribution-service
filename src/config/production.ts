@@ -4,6 +4,7 @@ export const productionConfig: AppConfig = {
   server: {
     port: 3000,
     host: '0.0.0.0',
+    allowedIPs: [],  // Empty array by default, should be configured via environment variables
   },
   database: {
     host: 'localhost',

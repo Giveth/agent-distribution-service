@@ -2,6 +2,7 @@ import express, { Request, Response, Router } from 'express';
 import { WalletService } from './services/wallet.service';
 import { config } from './config';
 import { initializeDataSource } from './data-source';
+import { ipWhitelistMiddleware } from './middleware/ip-whitelist';
 
 const app = express();
 const router = Router();
@@ -28,6 +29,9 @@ interface GenerateMultipleWalletsRequest {
 
 // Add JSON parsing middleware
 app.use(express.json());
+
+// Add IP whitelist middleware
+app.use(ipWhitelistMiddleware);
 
 // Generate a single wallet
 router.post('/generate', async (req: Request<{}, {}, GenerateWalletRequest>, res: Response) => {

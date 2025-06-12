@@ -4,6 +4,7 @@ export const developmentConfig: AppConfig = {
   server: {
     port: 3000,
     host: 'localhost',
+    allowedIPs: ['127.0.0.1', '::1'],  // Allow localhost in development
   },
   database: {
     host: 'localhost',

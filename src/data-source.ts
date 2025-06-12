@@ -17,7 +17,7 @@ export const AppDataSource = new DataSource({
     migrations: [path.join(__dirname, '../migrations/*.{ts,js}')],
     migrationsRun: config.environment === 'development',
     subscribers: [],
-    ssl: {
+    ssl: config.environment === 'development' ? false : {
         rejectUnauthorized: true,
         ca: fs.readFileSync(path.join(process.cwd(), 'certs', 'db-ca-certificate.crt'))
     }

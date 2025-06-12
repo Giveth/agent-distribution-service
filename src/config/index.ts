@@ -17,6 +17,7 @@ export const config: AppConfig = {
   server: {
     port: Number(process.env.PORT) || baseConfig.server.port,
     host: process.env.HOST || baseConfig.server.host,
+    allowedIPs: process.env.ALLOWED_IPS ? process.env.ALLOWED_IPS.split(',') : baseConfig.server.allowedIPs,
   },
   database: {
     host: process.env.DB_HOST || baseConfig.database.host,
