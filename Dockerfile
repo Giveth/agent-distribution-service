@@ -1,4 +1,4 @@
-FROM node:  24-alpine3.21
+FROM node:24-alpine3.21
 
 # Install PostgreSQL client and other dependencies
 RUN apk add --no-cache postgresql-client python3 make g++
