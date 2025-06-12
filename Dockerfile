@@ -9,7 +9,7 @@ WORKDIR /usr/src/app
 # Install app dependencies
 COPY package*.json ./
 COPY tsconfig*.json ./
-RUN npm ci --omit=dev
+RUN npm install
 
 # Copy source code
 COPY . .
