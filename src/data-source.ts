@@ -22,7 +22,7 @@ export const AppDataSource = new DataSource({
     config.environment === "development"
       ? false
       : {
-          rejectUnauthorized: false,
+          rejectUnauthorized: true,
           ca: fs
             .readFileSync(
               path.join(process.cwd(), "certs", "db-ca-certificate.crt")

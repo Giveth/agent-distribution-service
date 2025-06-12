@@ -7,6 +7,7 @@ services:
     env_file:
       - .env
     volumes:
+      - .:/usr/src/app
       - ./certs:/usr/src/app/certs:ro
     networks:
       - agent-distribution-service
