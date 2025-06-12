@@ -17,15 +17,18 @@ export const AppDataSource = new DataSource({
   migrations: [path.join(__dirname, "../migrations/*.{ts,js}")],
   migrationsRun: config.environment === "development",
   subscribers: [],
-  ssl:
-    config.environment === "development"
-      ? false
-      : {
-          rejectUnauthorized: true,
-          ca: fs.readFileSync(
-            path.join(process.cwd(), "certs", "db-ca-certificate.crt")
-          ),
-        },
+  ssl: {
+    rejectUnauthorized: true,
+  },
+  //  ssl:
+  //  config.environment === "development"
+  //    ? false
+  //    : {
+  //        rejectUnauthorized: true,
+  //          ca: fs.readFileSync(
+  //            path.join(process.cwd(), "certs", "db-ca-certificate.crt")
+  //          ),
+  //        },
 });
 
 // Initialize the data source
