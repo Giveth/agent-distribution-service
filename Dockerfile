@@ -30,4 +30,4 @@ RUN npm prune --omit=dev
 
 EXPOSE 3000
 
-ENTRYPOINT ["sh", "-c", "node dist/index.js"]
+ENTRYPOINT ["sh", "-c", "npm run migration:run && node dist/index.js"]
