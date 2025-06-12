@@ -1,33 +1,24 @@
-# ---------- Build stage ----------
-FROM node:24-alpine3.21 AS builder
-
-# Add build tools *only* here
-RUN apk add --no-cache python3 make g++
-
-WORKDIR /usr/src/app
-
-# Install dependencies with deterministic lock file
-COPY package*.json ./
-COPY tsconfig*.json ./
-RUN npm ci
-
-# Copy TS source & build it
-COPY . .
-RUN npm run build
-
-# ---------- Runtime stage ----------
 FROM node:24-alpine3.21
 
+# Install PostgreSQL client and other dependencies
+RUN apk add --no-cache postgresql-client python3 make g++
+
+# Create app directory
 WORKDIR /usr/src/app
 
-# Copy only compiled app and prod node_modules
-COPY --from=builder /usr/src/app/dist          ./dist
-COPY --from=builder /usr/src/app/node_modules  ./node_modules
+# Install app dependencies
 COPY package*.json ./
+COPY tsconfig*.json ./
+RUN npm ci --omit=dev
 
-# Remove dev dependencies (they shouldn’t exist, but belt-and-braces)
-RUN npm prune --omit=dev
+# Copy source code
+COPY . .
 
+# Build TypeScript code
+RUN npm run build
+
+# Expose the port the app runs on
 EXPOSE 3000
 
-ENTRYPOINT ["sh", "-c", "npm run migration:run && node dist/index.js"]
+# Command to run the application
+ENTRYPOINT ["sh", "-c", "npm run migration:run && npm run start"]
