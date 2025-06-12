@@ -21,4 +21,4 @@ RUN npm run build
 EXPOSE 3000
 
 # Command to run the application
-ENTRYPOINT ["sh", "-c", "npm run migration:run && npm run start"]
+ENTRYPOINT ["sh", "-c", "npm run start"]

@@ -31,6 +31,13 @@ export const AppDataSource = new DataSource({
 // Initialize the data source
 export const initializeDataSource = async (): Promise<void> => {
   try {
+    console.log("DB Config:", {
+      host: config.database.host,
+      port: config.database.port,
+      username: config.database.username,
+      database: config.database.database,
+      env: config.environment
+    });
     await AppDataSource.initialize();
     console.log("Database connection established");
   } catch (error) {
