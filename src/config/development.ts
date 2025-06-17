@@ -3,7 +3,7 @@ import { AppConfig } from "./schema";
 export const developmentConfig: AppConfig = {
   server: {
     port: 3000,
-    host: "0.0.0.0",
+    host: "localhost",
     allowedIPs: ["127.0.0.1", "::1"], // Allow localhost in development
   },
   database: {
