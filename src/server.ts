@@ -78,6 +78,8 @@ export async function startServer() {
   const { port, host } = config.server;
   app.listen(port, host, () => {
     console.log(`Server running at http://${host}:${port}`);
-    console.log(`ALLOWED_IPS: ${config.server.allowedIPs}`);
+    console.log("Environment:", process.env.NODE_ENV);
+    console.log("Raw ALLOWED_IPS from env:", process.env.ALLOWED_IPS);
+    console.log("Processed allowed IPs:", config.server.allowedIPs);
   });
 }
