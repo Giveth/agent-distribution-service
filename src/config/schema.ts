@@ -24,5 +24,5 @@ export interface AppConfig {
   server: ServerConfig;
   database: DatabaseConfig;
   blockchain: BlockchainConfig;
-  environment: 'development' | 'production';
+  environment: 'development' | 'staging' | 'production';
 } 

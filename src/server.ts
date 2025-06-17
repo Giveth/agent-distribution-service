@@ -36,6 +36,7 @@ app.use(ipWhitelistMiddleware);
 // Generate a single wallet
 router.post('/generate', async (req: Request<{}, {}, GenerateWalletRequest>, res: Response) => {
     try {
+        console.log('Generate wallet endpoint hit');
         const { index = 0 } = req.body;
         const wallet = await walletService.generateWallet(index);
         res.json(wallet);
@@ -49,6 +50,7 @@ router.post('/generate', async (req: Request<{}, {}, GenerateWalletRequest>, res
 // Get all wallets
 router.get('/wallets', async (req: Request, res: Response) => {
     try {
+        console.log('Get all wallets endpoint hit');
         const wallets = await walletService.getManagedWallets();
         res.json(wallets);
     } catch (error) {
@@ -60,6 +62,7 @@ router.get('/wallets', async (req: Request, res: Response) => {
 
 // Basic health check endpoint
 app.get('/health', (req: Request, res: Response) => {
+    console.log('Health check endpoint hit');
     res.json({ status: 'ok' });
 });
 

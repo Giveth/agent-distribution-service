@@ -1,5 +1,6 @@
 import { developmentConfig } from './development';
 import { productionConfig } from './production';
+import { stagingConfig } from './staging';
 import { AppConfig } from './schema';
 import dotenv from 'dotenv';
 
@@ -10,7 +11,7 @@ dotenv.config();
 const env = process.env.NODE_ENV || 'development';
 
 // Select the base configuration based on environment
-const baseConfig = env === 'production' ? productionConfig : developmentConfig;
+const baseConfig = env === 'production' ? productionConfig : env === 'staging' ? stagingConfig : developmentConfig;
 
 // Merge environment variables with the base configuration
 export const config: AppConfig = {
