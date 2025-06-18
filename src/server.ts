@@ -39,8 +39,12 @@ router.post(
   async (req: Request<{}, {}, GenerateWalletRequest>, res: Response) => {
     try {
       console.log("Generate wallet endpoint hit");
-      const { index = 0 } = req.body;
-      const wallet = await walletService.generateWallet(index);
+      const { index } = req.body;
+      
+      // If no index is provided, get the next available index
+      const walletIndex = index !== undefined ? index : await walletService.getNextAvailableIndex();
+      
+      const wallet = await walletService.generateWallet(walletIndex);
       res.json(wallet);
     } catch (error) {
       res.status(500).json({

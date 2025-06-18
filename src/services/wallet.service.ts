@@ -113,4 +113,17 @@ export class WalletService {
             throw new Error(`Failed to get managed wallets: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
+
+    /**
+     * Get the next available index for wallet generation
+     * @returns The next available index (0 if no wallets exist)
+     */
+    async getNextAvailableIndex(): Promise<number> {
+        try {
+            const highestIndex = await this.walletRepository.getHighestIndex();
+            return highestIndex + 1;
+        } catch (error) {
+            throw new Error(`Failed to get next available index: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+    }
 } 

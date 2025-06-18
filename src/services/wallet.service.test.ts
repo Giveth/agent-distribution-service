@@ -32,6 +32,7 @@ describe('WalletService', () => {
     mockWalletRepository = {
       saveWallet: sinon.stub(),
       findAll: sinon.stub(),
+      getHighestIndex: sinon.stub(),
     };
 
     // Create service with mocked dependencies
@@ -170,6 +171,38 @@ describe('WalletService', () => {
         expect.fail('Should have thrown an error');
       } catch (err: any) {
         expect(err.message).to.equal('Failed to get managed wallets: Failed to get wallets');
+      }
+    });
+  });
+
+  describe('getNextAvailableIndex', () => {
+    it('should return 0 when no wallets exist', async () => {
+      mockWalletRepository.getHighestIndex = sinon.stub().resolves(-1);
+
+      const result = await service.getNextAvailableIndex();
+
+      expect(result).to.equal(0);
+      expect(mockWalletRepository.getHighestIndex.called).to.be.true;
+    });
+
+    it('should return next index when wallets exist', async () => {
+      mockWalletRepository.getHighestIndex = sinon.stub().resolves(5);
+
+      const result = await service.getNextAvailableIndex();
+
+      expect(result).to.equal(6);
+      expect(mockWalletRepository.getHighestIndex.called).to.be.true;
+    });
+
+    it('should throw error when getting highest index fails', async () => {
+      const error = new Error('Failed to get highest index');
+      mockWalletRepository.getHighestIndex = sinon.stub().rejects(error);
+
+      try {
+        await service.getNextAvailableIndex();
+        expect.fail('Should have thrown an error');
+      } catch (err: any) {
+        expect(err.message).to.equal('Failed to get next available index: Failed to get highest index');
       }
     });
   });
