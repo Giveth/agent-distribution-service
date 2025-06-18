@@ -64,7 +64,7 @@ router.get("/wallets", async (req: Request, res: Response) => {
 });
 
 // Basic health check endpoint
-app.get("/health", (req: Request, res: Response) => {
+app.get("/api/health", (req: Request, res: Response) => {
   console.log("Health check endpoint hit");
   res.json({ status: "ok" });
 });
