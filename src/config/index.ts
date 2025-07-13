@@ -33,6 +33,12 @@ export const config: AppConfig = {
     seedPhrase: process.env.SEED_PHRASE || baseConfig.blockchain.seedPhrase,
     rpcUrl: process.env.RPC_URL || baseConfig.blockchain.rpcUrl,
     chainId: Number(process.env.CHAIN_ID) || baseConfig.blockchain.chainId,
+    tokenAddress: process.env.TOKEN_ADDRESS || baseConfig.blockchain.tokenAddress,
+  },
+  gelato: {
+    sponsorApiKey: process.env.GELATO_SPONSOR_API_KEY || baseConfig.gelato.sponsorApiKey,
+    sponsorUrl: process.env.GELATO_SPONSOR_URL || baseConfig.gelato.sponsorUrl,
+    chainId: Number(process.env.GELATO_CHAIN_ID) || baseConfig.gelato.chainId,
   },
   environment: env as 'development' | 'production',
 }; 

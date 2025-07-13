@@ -18,11 +18,19 @@ export interface BlockchainConfig {
   seedPhrase: string;
   rpcUrl: string;
   chainId: number;
+  tokenAddress: string;
+}
+
+export interface GelatoConfig {
+  sponsorApiKey: string;
+  sponsorUrl: string;
+  chainId: number;
 }
 
 export interface AppConfig {
   server: ServerConfig;
   database: DatabaseConfig;
   blockchain: BlockchainConfig;
+  gelato: GelatoConfig;
   environment: 'development' | 'staging' | 'production';
 } 

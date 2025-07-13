@@ -19,6 +19,12 @@ export const productionConfig: AppConfig = {
     seedPhrase: '',
     rpcUrl: 'https://polygon-rpc.com',
     chainId: 137, // Polygon mainnet
+    tokenAddress: "0xc7B1807822160a8C5b6c9EaF5C584aAD0972deeC", // GIV token address
+  },
+  gelato: {
+    sponsorApiKey: process.env.GELATO_SPONSOR_API_KEY || "",
+    sponsorUrl: "https://relay.gelato.digital",
+    chainId: 137, // Polygon mainnet
   },
   environment: 'production',
 }; 
