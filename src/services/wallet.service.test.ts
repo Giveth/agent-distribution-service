@@ -1,9 +1,8 @@
 import { expect } from 'chai';
 import { WalletService } from './wallet.service';
 import { ethers } from 'ethers';
-import sinon, { SinonStub } from 'sinon';
-import { WalletRepository } from '../repositories/wallet.repository';
-import { initializeDataSource } from '../data-source';
+import sinon from 'sinon';
+import * as walletUtil from '../utils/wallet.util';
 
 describe('WalletService', () => {
   let service: WalletService;
@@ -33,13 +32,13 @@ describe('WalletService', () => {
       saveWallet: sinon.stub(),
       findAll: sinon.stub(),
       getHighestIndex: sinon.stub(),
+      findByAddress: sinon.stub(),
     };
 
     // Create service with mocked dependencies
     service = new WalletService();
     service['provider'] = mockProvider;
     service['walletRepository'] = mockWalletRepository;
-    service['wallets'] = new Map();
   });
 
   afterEach(() => {
@@ -113,7 +112,15 @@ describe('WalletService', () => {
     it('should send transaction and return hash', async () => {
       const txHash = '0xabc';
       mockWallet.sendTransaction.resolves({ hash: txHash });
-      service['wallets'].set('0x123', mockWallet);
+      
+      // Mock the deriveWalletFromSeedPhrase function
+      sinon.stub(walletUtil, 'deriveWalletFromSeedPhrase').returns(mockWallet);
+
+      // Mock repository to return wallet info
+      mockWalletRepository.findByAddress.resolves({
+        address: '0x123',
+        hdPath: "m/44'/60'/0'/0/0",
+      });
 
       const result = await service.sendTransaction('0x123', '0x456', '1.0');
 
@@ -125,18 +132,28 @@ describe('WalletService', () => {
     });
 
     it('should throw error when wallet is not found', async () => {
+      mockWalletRepository.findByAddress.resolves(null);
+
       try {
         await service.sendTransaction('0x123', '0x456', '1.0');
         expect.fail('Should have thrown an error');
       } catch (err: any) {
-        expect(err.message).to.equal('Failed to send transaction: Wallet not found. Please generate or import the wallet first.');
+        expect(err.message).to.equal('Failed to send transaction: Wallet not found');
       }
     });
 
     it('should throw error when transaction fails', async () => {
       const error = new Error('Transaction failed');
       mockWallet.sendTransaction.rejects(error);
-      service['wallets'].set('0x123', mockWallet);
+      
+      // Mock the deriveWalletFromSeedPhrase function
+      sinon.stub(walletUtil, 'deriveWalletFromSeedPhrase').returns(mockWallet);
+
+      // Mock repository to return wallet info
+      mockWalletRepository.findByAddress.resolves({
+        address: '0x123',
+        hdPath: "m/44'/60'/0'/0/0",
+      });
 
       try {
         await service.sendTransaction('0x123', '0x456', '1.0');
