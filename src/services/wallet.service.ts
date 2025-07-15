@@ -122,6 +122,10 @@ export class WalletService {
      */
     async distributeFunds(walletAddress: string, projects: Project[]): Promise<DistributionResult> {
         try {
+            if (projects.length === 0) {
+                throw new Error("No projects to distribute funds to");
+            }
+
             // Get wallet info from database
             const wallet = await this.walletRepository.findByAddress(walletAddress);
             if (!wallet) {
@@ -131,8 +135,10 @@ export class WalletService {
             // Get Giv token balance
             const distributionTokenAddress = config.blockchain.tokenAddress;
             const distributionTokenContract = new ethers.Contract(distributionTokenAddress, erc20Abi, this.provider);
-            const balanceWei = await distributionTokenContract.balanceOf(walletAddress);
+            const balanceWei = await distributionTokenContract.balanceOf(wallet.address);
             const balance = ethers.formatEther(balanceWei);
+
+            console.log("Starting distribution of funds from wallet", wallet.address, "with balance", balance);
 
             if (Number(balance) <= 0) {
                 throw new Error(`Wallet ${walletAddress} has no balance to distribute`);

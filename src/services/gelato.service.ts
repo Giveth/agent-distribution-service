@@ -51,31 +51,35 @@ export class GelatoService {
       throw new Error('Gelato Sponsor API Key is required for sponsored transactions');
     }
 
-    // Use the wallet utility to derive the wallet
-    const wallet = deriveWalletFromSeedPhrase(this.seedPhrase, hdPath);
-    const privateKey = wallet.privateKey;
-    const owner = privateKeyToAccount(privateKey as Hex);
+    try {
+      const wallet = deriveWalletFromSeedPhrase(this.seedPhrase, hdPath);
+      
+      const owner = privateKeyToAccount(wallet.privateKey as Hex);
 
-    // Create Gelato Smart Account with type assertions to bypass version conflicts
-    const account = await gelato({
-      owner: owner as any,
-      client: this.publicClient as any,
-    });
+      // Create Gelato Smart Account with type assertions to bypass version conflicts
+      const account = await gelato({
+        owner: owner as any,
+        client: this.publicClient as any,
+      });
 
-    // Create wallet client with type assertion
-    const client = createWalletClient({
-      account: account as any,
-      chain: polygon,
-      transport: http()
-    });
+      // Create wallet client with type assertion
+      const client = createWalletClient({
+        account: account as any,
+        chain: polygon,
+        transport: http()
+      });
 
-    // Create smart wallet client with sponsor API key
-    const smartWalletClient = createGelatoSmartWalletClient(client as any, {
-      apiKey: this.sponsorApiKey
-    });
+      // Create smart wallet client with sponsor API key
+      const smartWalletClient = createGelatoSmartWalletClient(client as any, {
+        apiKey: this.sponsorApiKey
+      });
 
-    this.smartWalletClients.set(address, smartWalletClient);
-    return smartWalletClient;
+      this.smartWalletClients.set(address, smartWalletClient);
+      return smartWalletClient;
+    } catch (error) {
+      console.error("Error in getSmartWalletClient:", error);
+      throw error;
+    }
   }
 
   /**
@@ -95,6 +99,8 @@ export class GelatoService {
         data: request.data as `0x${string}`,
         value: request.value ? BigInt(request.value) : 0n
       };
+
+      console.log("call data", call);
 
       // Execute the sponsored transaction with type assertion
       const results = await (smartWalletClient as any).execute({
