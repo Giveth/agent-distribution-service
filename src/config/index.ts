@@ -34,6 +34,7 @@ export const config: AppConfig = {
     rpcUrl: process.env.RPC_URL || baseConfig.blockchain.rpcUrl,
     chainId: Number(process.env.CHAIN_ID) || baseConfig.blockchain.chainId,
     tokenAddress: process.env.TOKEN_ADDRESS || baseConfig.blockchain.tokenAddress,
+    donationHandlerAddress: process.env.DONATION_HANDLER_ADDRESS || baseConfig.blockchain.donationHandlerAddress,
   },
   gelato: {
     sponsorApiKey: process.env.GELATO_SPONSOR_API_KEY || baseConfig.gelato.sponsorApiKey,

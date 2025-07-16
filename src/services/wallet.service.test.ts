@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import { WalletService } from './wallet.service';
-import { Project } from './distribution.service';
+import { Project } from './fund-allocation.service';
 import { ethers } from 'ethers';
 import sinon from 'sinon';
 import * as walletUtil from '../utils/wallet.util';
@@ -392,11 +392,11 @@ describe('WalletService - Distribution Integration', () => {
                 11.03, 7.31, 14.17, 4.17, 6.33, 26.71, 9.66, 22.01, 12.53, 17.82
             ];
 
-            // Test the actual DistributionService integration
-            const distributionService = new (require('./distribution.service').DistributionService)();
+            // Test the actual FundAllocationService integration
+            const fundAllocationService = new (require('./fund-allocation.service').FundAllocationService)();
             
             // Validate parameters
-            const validation = distributionService.validateDistributionParameters(
+            const validation = fundAllocationService.validateDistributionParameters(
                 projects,
                 expectedDistributionAmount,
                 0.25
@@ -405,7 +405,7 @@ describe('WalletService - Distribution Integration', () => {
             expect(validation.errors).to.have.length(0);
 
             // Calculate distribution using the real service
-            const result = distributionService.calculateDistribution(
+            const result = fundAllocationService.calculateDistribution(
                 projects,
                 expectedDistributionAmount,
                 0.25
@@ -455,7 +455,7 @@ describe('WalletService - Distribution Integration', () => {
             });
 
             // Test statistics
-            const stats = distributionService.getDistributionStatistics(result.calculations);
+            const stats = fundAllocationService.getDistributionStatistics(result.calculations);
             expect(stats.minAmount).to.be.closeTo(3.19, 2); // Project 8 (score 60)
             expect(stats.maxAmount).to.be.closeTo(29.26, 2); // Projects 9 and 16 (score 97)
             expect(stats.averageAmount).to.be.closeTo(expectedDistributionAmount / 20, 2);

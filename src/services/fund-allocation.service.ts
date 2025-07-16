@@ -37,7 +37,7 @@ export interface DistributionResult {
     }>;
 }
 
-export class DistributionService {
+export class FundAllocationService {
     /**
      * Calculate exponential rank-based distribution amounts
      * @param projects Array of projects with scores

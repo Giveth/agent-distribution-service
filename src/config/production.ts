@@ -20,6 +20,7 @@ export const productionConfig: AppConfig = {
     rpcUrl: 'https://polygon-rpc.com',
     chainId: 137, // Polygon mainnet
     tokenAddress: "0xc7B1807822160a8C5b6c9EaF5C584aAD0972deeC", // GIV token address
+    donationHandlerAddress: "0x6e349c56f512cb4250276bf36335c8dd618944a1", // Donation handler contract address
   },
   gelato: {
     sponsorApiKey: process.env.GELATO_SPONSOR_API_KEY || "",

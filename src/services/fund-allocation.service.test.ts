@@ -1,16 +1,16 @@
 import { expect } from 'chai';
-import { DistributionService, Project, DistributionCalculation } from './distribution.service';
+import { FundAllocationService, Project, DistributionCalculation } from './fund-allocation.service';
 
-describe('DistributionService', () => {
-    let distributionService: DistributionService;
+describe('FundAllocationService', () => {
+    let fundAllocationService: FundAllocationService;
 
     beforeEach(() => {
-        distributionService = new DistributionService();
+        fundAllocationService = new FundAllocationService();
     });
 
     describe('calculateExponentialRankDistribution', () => {
         it('should handle empty projects array', () => {
-            const result = distributionService.calculateExponentialRankDistribution([], 1000);
+            const result = fundAllocationService.calculateExponentialRankDistribution([], 1000);
             expect(result).to.deep.equal([]);
         });
 
@@ -19,7 +19,7 @@ describe('DistributionService', () => {
                 { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 85 }
             ];
 
-            const result = distributionService.calculateExponentialRankDistribution(projects, 1000);
+            const result = fundAllocationService.calculateExponentialRankDistribution(projects, 1000);
             
             expect(result).to.have.length(1);
             expect(result[0].rank).to.equal(1);
@@ -35,7 +35,7 @@ describe('DistributionService', () => {
                 { id: '3', name: 'Project C', slug: 'project-c', walletAddress: '0x789', score: 70 }
             ];
 
-            const result = distributionService.calculateExponentialRankDistribution(projects, 1000);
+            const result = fundAllocationService.calculateExponentialRankDistribution(projects, 1000);
             
             expect(result).to.have.length(3);
             
@@ -76,7 +76,7 @@ describe('DistributionService', () => {
                 { id: '3', name: 'Project C', slug: 'project-c', walletAddress: '0x789', score: 70 }
             ];
 
-            const result = distributionService.calculateExponentialRankDistribution(projects, 1000, 0.25); // 25% floor factor
+            const result = fundAllocationService.calculateExponentialRankDistribution(projects, 1000, 0.25); // 25% floor factor
             
             // Floor component = FF/TP = 0.25/3 = 0.0833... per project
             const expectedFloorComponent = 0.25 / 3;
@@ -101,7 +101,7 @@ describe('DistributionService', () => {
                 { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: 80 }
             ];
 
-            const result = distributionService.calculateDistribution(projects, 1000, 0.25);
+            const result = fundAllocationService.calculateDistribution(projects, 1000, 0.25);
 
             expect(result.calculations).to.have.length(2);
             expect(result.summary.totalProjects).to.equal(2);
@@ -117,14 +117,14 @@ describe('DistributionService', () => {
                 { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90 }
             ];
 
-            const result = distributionService.validateDistributionParameters(projects, 1000, 0.25);
+            const result = fundAllocationService.validateDistributionParameters(projects, 1000, 0.25);
 
             expect(result.isValid).to.be.true;
             expect(result.errors).to.have.length(0);
         });
 
         it('should reject empty projects array', () => {
-            const result = distributionService.validateDistributionParameters([], 1000, 0.25);
+            const result = fundAllocationService.validateDistributionParameters([], 1000, 0.25);
 
             expect(result.isValid).to.be.false;
             expect(result.errors).to.include('No projects provided for distribution');
@@ -135,7 +135,7 @@ describe('DistributionService', () => {
                 { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90 }
             ];
 
-            const result = distributionService.validateDistributionParameters(projects, -100, 0.25);
+            const result = fundAllocationService.validateDistributionParameters(projects, -100, 0.25);
 
             expect(result.isValid).to.be.false;
             expect(result.errors).to.include('Total amount must be greater than 0');
@@ -146,7 +146,7 @@ describe('DistributionService', () => {
                 { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90 }
             ];
 
-            const result = distributionService.validateDistributionParameters(projects, 1000, 1.5);
+            const result = fundAllocationService.validateDistributionParameters(projects, 1000, 1.5);
 
             expect(result.isValid).to.be.false;
             expect(result.errors).to.include('Floor factor must be between 0 and 1');
@@ -158,7 +158,7 @@ describe('DistributionService', () => {
                 { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: -10 }
             ];
 
-            const result = distributionService.validateDistributionParameters(projects, 1000, 0.25);
+            const result = fundAllocationService.validateDistributionParameters(projects, 1000, 0.25);
 
             expect(result.isValid).to.be.false;
             expect(result.errors[0]).to.include('Projects with invalid scores');
@@ -170,7 +170,7 @@ describe('DistributionService', () => {
                 { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x123', score: 80 }
             ];
 
-            const result = distributionService.validateDistributionParameters(projects, 1000, 0.25);
+            const result = fundAllocationService.validateDistributionParameters(projects, 1000, 0.25);
 
             expect(result.isValid).to.be.false;
             expect(result.errors).to.include('Duplicate wallet addresses found in projects');
@@ -203,7 +203,7 @@ describe('DistributionService', () => {
                 }
             ];
 
-            const stats = distributionService.getDistributionStatistics(calculations);
+            const stats = fundAllocationService.getDistributionStatistics(calculations);
 
             expect(stats.minAmount).to.equal(100);
             expect(stats.maxAmount).to.equal(600);
@@ -219,7 +219,7 @@ describe('DistributionService', () => {
         });
 
         it('should handle empty calculations array', () => {
-            const stats = distributionService.getDistributionStatistics([]);
+            const stats = fundAllocationService.getDistributionStatistics([]);
 
             expect(stats.minAmount).to.equal(0);
             expect(stats.maxAmount).to.equal(0);
@@ -254,7 +254,7 @@ describe('DistributionService', () => {
                 return DA * percentage;
             });
 
-            const result = distributionService.calculateExponentialRankDistribution(projects, DA, FF);
+            const result = fundAllocationService.calculateExponentialRankDistribution(projects, DA, FF);
             
             result.forEach((calc: any, index: number) => {
                 expect(calc.finalAmount).to.be.closeTo(expectedAmounts[index], 0.0001);
@@ -318,7 +318,7 @@ describe('DistributionService', () => {
             ];
 
             // Calculate distribution using the real service
-            const result = distributionService.calculateDistribution(projects, distributionAmount, floorFactor);
+            const result = fundAllocationService.calculateDistribution(projects, distributionAmount, floorFactor);
             const calculations = result.calculations;
 
             // Verify we have 20 projects
@@ -367,7 +367,7 @@ describe('DistributionService', () => {
             });
 
             // Test statistics
-            const stats = distributionService.getDistributionStatistics(calculations);
+            const stats = fundAllocationService.getDistributionStatistics(calculations);
             expect(stats.minAmount).to.be.closeTo(3.19, 2); // Project 1 (score 62)
             expect(stats.maxAmount).to.be.closeTo(29.26, 2); // Projects 9 and 16 (score 97)
             expect(stats.averageAmount).to.be.closeTo(distributionAmount / 20, 2);

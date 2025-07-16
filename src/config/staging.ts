@@ -20,6 +20,7 @@ export const stagingConfig: AppConfig = {
     rpcUrl: "https://polygon-rpc.com",
     chainId: 137, // Polygon mainnet chain ID
     tokenAddress: "0xc20CAf8deE81059ec0c8E5971b2AF7347eC131f4", // TPOL token address
+    donationHandlerAddress: "0x6e349c56f512cb4250276bf36335c8dd618944a1", // Donation handler contract address
   },
   gelato: {
     sponsorApiKey: process.env.GELATO_SPONSOR_API_KEY || "",

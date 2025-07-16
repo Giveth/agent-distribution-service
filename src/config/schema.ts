@@ -19,6 +19,7 @@ export interface BlockchainConfig {
   rpcUrl: string;
   chainId: number;
   tokenAddress: string;
+  donationHandlerAddress: string;
 }
 
 export interface GelatoConfig {

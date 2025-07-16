@@ -1,7 +1,8 @@
 import { ethers, HDNodeWallet } from 'ethers';
 import { WalletRepository } from '../repositories/wallet.repository';
 import { GelatoService, SponsoredTransactionRequest } from './gelato.service';
-import { DistributionService, Project, DistributionCalculation } from './distribution.service';
+import { FundAllocationService, Project, DistributionCalculation } from './fund-allocation.service';
+import { DonationHandlerService, DonationRecipient } from './donation-handler.service';
 import { config } from '../config';
 import { erc20Abi } from 'viem';
 import { deriveWalletFromSeedPhrase } from '../utils/wallet.util';
@@ -38,7 +39,8 @@ export class WalletService {
     private provider: ethers.JsonRpcProvider;
     private walletRepository: WalletRepository;
     private gelatoService: GelatoService;
-    private distributionService: DistributionService;
+    private fundAllocationService: FundAllocationService;
+    private donationHandlerService: DonationHandlerService;
     private baseHDPath: string = "m/44'/60'/0'/0/";
     private seedPhrase: string;
 
@@ -50,7 +52,8 @@ export class WalletService {
         this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
         this.walletRepository = new WalletRepository();
         this.gelatoService = new GelatoService();
-        this.distributionService = new DistributionService();
+        this.fundAllocationService = new FundAllocationService();
+        this.donationHandlerService = new DonationHandlerService();
 
         this.seedPhrase = config.blockchain.seedPhrase;
     }
@@ -199,7 +202,7 @@ export class WalletService {
             console.log(`Distribution strategy: ${distributionStrategy} - Amount to distribute: ${tokenAmountToDistribute} GIV`);
 
             // Validate distribution parameters
-            const validation = this.distributionService.validateDistributionParameters(
+            const validation = this.fundAllocationService.validateDistributionParameters(
                 projects,
                 tokenAmountToDistribute,
                 floorFactor
@@ -210,7 +213,7 @@ export class WalletService {
             }
 
             // Calculate distribution amounts using exponential rank-based system
-            const distributionResult = this.distributionService.calculateDistribution(
+            const distributionResult = this.fundAllocationService.calculateDistribution(
                 projects,
                 tokenAmountToDistribute,
                 floorFactor
@@ -242,38 +245,61 @@ export class WalletService {
             let successCount = 0;
             let failureCount = 0;
 
-            // Process each project distribution
+            // Prepare donation recipients for batch processing
+            const recipients: DonationRecipient[] = [];
+
+            // Collect all distributions for batch processing
             for (const calculation of distributionCalculations) {
+                recipients.push({
+                    address: calculation.project.walletAddress,
+                    amount: calculation.finalAmount.toString(),
+                    data: '0x' // Empty data for now
+                });
+
+                projectsDistributionDetails.push({
+                    project: calculation.project,
+                    amount: calculation.finalAmount.toString()
+                });
+            }
+
+            // Send batch donation if there are distributions
+            if (recipients.length > 0) {
                 try {
-                    const amountInWei = ethers.parseEther(calculation.finalAmount.toString());
+                    // Check if approval is needed
+                    const totalAmountWei = ethers.parseEther(
+                        recipients.reduce((sum, recipient) => sum + parseFloat(recipient.amount), 0).toString()
+                    );
+                    
+                    const isApproved = await this.donationHandlerService.isApproved(walletAddress, totalAmountWei);
+                    
+                    if (!isApproved) {
+                        console.log(`Approval needed for ${ethers.formatEther(totalAmountWei)} GIV. Approving...`);
+                        const approvalResult = await this.donationHandlerService.approve(walletAddress);
+                        if (!approvalResult.success) {
+                            throw new Error(`Failed to approve donation handler: ${approvalResult.error}`);
+                        }
+                        console.log(`Approval successful: ${approvalResult.transactionHash}`);
+                    }
 
-                    // Send sponsored transaction
-                    const transactionRequest: SponsoredTransactionRequest = {
-                        from: walletAddress,
-                        to: calculation.project.walletAddress,
-                        value: amountInWei.toString(),
-                        data: distributionTokenContract.interface.encodeFunctionData('transfer', [calculation.project.walletAddress, amountInWei]),
-                    };
+                    // Send batch donation
+                    const donationResult = await this.donationHandlerService.sendBatchDonation(walletAddress, recipients);
 
-                    const result = await this.gelatoService.sendSponsoredTransaction(transactionRequest, wallet.hdPath);
+                    if (donationResult.success) {
+                        transactions.push({
+                            to: this.donationHandlerService.getContractAddress(),
+                            amount: donationResult.totalAmount,
+                            taskId: donationResult.taskId,
+                            transactionHash: donationResult.transactionHash,
+                        });
 
-                    transactions.push({
-                        to: calculation.project.walletAddress,
-                        amount: calculation.finalAmount.toString(),
-                        taskId: result.taskId,
-                        transactionHash: result.transactionHash,
-                    });
-
-                    projectsDistributionDetails.push({
-                        project: calculation.project,
-                        amount: calculation.finalAmount.toString()
-                    });
-
-                    successCount++;
-                    console.log(`Successfully distributed ${calculation.finalAmount} to ${calculation.project.name} (rank: ${calculation.rank})`);
+                        successCount = donationResult.recipientCount;
+                        console.log(`Successfully distributed ${donationResult.totalAmount} GIV to ${donationResult.recipientCount} projects via donation handler contract`);
+                    } else {
+                        throw new Error(`Batch donation failed: ${donationResult.error}`);
+                    }
                 } catch (error) {
-                    console.error(`Failed to send transaction to ${calculation.project.walletAddress}:`, error);
-                    failureCount++;
+                    console.error(`Failed to send batch donation transaction:`, error);
+                    failureCount = recipients.length;
                 }
             }
 

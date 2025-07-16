@@ -8,6 +8,9 @@ A TypeScript service for managing Ethereum wallets with PostgreSQL database inte
 - Store wallet information in PostgreSQL
 - Gelato gas sponsorship for all transactions
 - Automatic fund distribution with calculations
+- Donation Handler Contract Integration - Uses specialized contract for secure donations
+- Batch Donation Support - Efficiently distribute funds to multiple recipients in a single transaction
+- Automatic Approval Management - Handles ERC-20 token approvals for the donation handler
 - RESTful API endpoints for wallet management
 - Docker support for easy deployment
 - TypeORM for database management
@@ -51,6 +54,10 @@ CHAIN_ID=137
 GELATO_SPONSOR_API_KEY="your_gelato_sponsor_api_key_here"
 GELATO_SPONSOR_URL="https://relay.gelato.digital"
 GELATO_CHAIN_ID=137
+
+# Blockchain Configuration
+TOKEN_ADDRESS="0xc7B1807822160a8C5b6c9EaF5C584aAD0972deeC"
+DONATION_HANDLER_ADDRESS="0x6e349c56f512cb4250276bf36335c8dd618944a1"
 
 # Server Configuration
 PORT=3000
@@ -199,7 +206,8 @@ When a new wallet is generated for a cause:
 When you call the distribute-funds endpoint:
 - The system checks the wallet's current token balance
 - Calculates distribution amounts based on project scores
-- Sends sponsored ERC-20 token transactions to all project wallets
+- Automatically approves the donation handler contract if needed
+- Sends batch donations through the donation handler contract for efficiency
 - Returns detailed results with transaction hashes and distribution details
 
 ### 3. Score-Based Distribution
@@ -210,10 +218,21 @@ The system distributes funds proportionally based on project scores:
 
 ### 4. Gas Sponsorship
 All transactions are automatically sponsored by Gelato:
+- Approval Transactions: ERC-20 token approvals are sponsored
+- Donation Transactions: All donation transactions are sponsored
 - No POL balance required in the sender's wallet
 - Gas fees are covered by your Gelato sponsor account
 - Transactions are executed on Polygon network
 - Automatic retry and error handling
+
+### 5. Donation Handler Contract
+The system uses a specialized donation handler contract for secure and efficient donations:
+- **Contract Address**: `0x6e349c56f512cb4250276bf36335c8dd618944a1` (Polygon)
+- **Batch Donations**: Distribute to multiple recipients in a single transaction
+- **Infinite Approvals**: Uses infinite approval for maximum efficiency
+- **Automatic Approvals**: Handles ERC-20 token approvals automatically
+- **Enhanced Security**: Uses dedicated contract for donation logic
+- **Gas Efficiency**: Reduces gas costs through batch processing and infinite approvals
 
 ## Benefits
 
