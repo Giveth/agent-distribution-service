@@ -1,6 +1,7 @@
 import { ethers, HDNodeWallet } from 'ethers';
 import { WalletRepository } from '../repositories/wallet.repository';
 import { GelatoService, SponsoredTransactionRequest } from './gelato.service';
+import { DistributionService, Project, DistributionCalculation } from './distribution.service';
 import { config } from '../config';
 import { erc20Abi } from 'viem';
 import { deriveWalletFromSeedPhrase } from '../utils/wallet.util';
@@ -9,13 +10,6 @@ import { deriveWalletFromSeedPhrase } from '../utils/wallet.util';
 export interface WalletInfo {
     address: string;    
     hdPath: string;
-}
-
-export interface Project {
-    name: string;
-    slug: string;
-    walletAddress: string;
-    score: number;
 }
 
 export interface DistributionResult {
@@ -44,6 +38,7 @@ export class WalletService {
     private provider: ethers.JsonRpcProvider;
     private walletRepository: WalletRepository;
     private gelatoService: GelatoService;
+    private distributionService: DistributionService;
     private baseHDPath: string = "m/44'/60'/0'/0/";
     private seedPhrase: string;
 
@@ -55,6 +50,7 @@ export class WalletService {
         this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
         this.walletRepository = new WalletRepository();
         this.gelatoService = new GelatoService();
+        this.distributionService = new DistributionService();
 
         this.seedPhrase = config.blockchain.seedPhrase;
     }
@@ -115,12 +111,47 @@ export class WalletService {
     }
 
     /**
-     * Distribute funds from a wallet to multiple recipients
+     * Calculate distribution amount based on balance
+     * @param balance The wallet balance in GIV
+     * @returns Object with amount to distribute and strategy used
+     */
+    private calculateDistributionAmount(balance: number): { amount: number; strategy: string } {
+        if (balance <= 0) {
+            return {
+                amount: 0,
+                strategy: 'skip distribution (zero balance)'
+            };
+        }
+
+        if (balance <= 1000) {
+            // If balance <= 1000 GIV, distribute 100% of remaining funds
+            return {
+                amount: balance,
+                strategy: '100% distribution (low balance)'
+            };
+        } else {
+            // Otherwise, use standard 5% distribution
+            return {
+                amount: balance * 0.05,
+                strategy: '5% distribution (standard)'
+            };
+        }
+    }
+
+    /**
+     * Distribute funds from a wallet to multiple recipients using exponential rank-based system
+     * 
+     * Distribution logic:
+     * - If balance is 0: Skip distribution entirely
+     * - If balance <= 1000 GIV: Distribute 100% of remaining funds (for low-value pools and deactivated causes)
+     * - If balance > 1000 GIV: Distribute 5% of balance (standard distribution)
+     * 
      * @param walletAddress The wallet address to distribute from
      * @param projects The projects to distribute funds to
+     * @param floorFactor Floor factor for minimum distribution (default 0.25 = 25%)
      * @returns Distribution result with transaction details
      */
-    async distributeFunds(walletAddress: string, projects: Project[]): Promise<DistributionResult> {
+    async distributeFunds(walletAddress: string, projects: Project[], floorFactor: number = 0.25): Promise<DistributionResult> {
         try {
             if (projects.length === 0) {
                 throw new Error("No projects to distribute funds to");
@@ -140,9 +171,61 @@ export class WalletService {
 
             console.log("Starting distribution of funds from wallet", wallet.address, "with balance", balance);
 
-            if (Number(balance) <= 0) {
-                throw new Error(`Wallet ${walletAddress} has no balance to distribute`);
+            const balanceNumber = Number(balance);
+            
+            // Calculate distribution amount based on balance
+            const distributionCalculation = this.calculateDistributionAmount(balanceNumber);
+            const tokenAmountToDistribute = distributionCalculation.amount;
+            const distributionStrategy = distributionCalculation.strategy;
+
+            // Check if balance is 0 - skip distribution entirely
+            if (balanceNumber <= 0) {
+                console.log(`Wallet ${walletAddress} has no balance to distribute - skipping distribution`);
+                return {
+                    walletAddress,
+                    totalBalance: balance,
+                    distributedAmount: "0",
+                    transactions: [],
+                    summary: {
+                        totalRecipients: 0,
+                        totalTransactions: 0,
+                        successCount: 0,
+                        failureCount: 0,
+                    },
+                    projectsDistributionDetails: []
+                };
             }
+
+            console.log(`Distribution strategy: ${distributionStrategy} - Amount to distribute: ${tokenAmountToDistribute} GIV`);
+
+            // Validate distribution parameters
+            const validation = this.distributionService.validateDistributionParameters(
+                projects,
+                tokenAmountToDistribute,
+                floorFactor
+            );
+
+            if (!validation.isValid) {
+                throw new Error(`Invalid distribution parameters: ${validation.errors.join(', ')}`);
+            }
+
+            // Calculate distribution amounts using exponential rank-based system
+            const distributionResult = this.distributionService.calculateDistribution(
+                projects,
+                tokenAmountToDistribute,
+                floorFactor
+            );
+
+            const distributionCalculations = distributionResult.calculations;
+
+            console.log("Distribution calculations:", distributionCalculations.map((calc: any) => ({
+                project: calc.project.name,
+                rank: calc.rank,
+                score: calc.project.score,
+                invertedExponentialRank: calc.invertedExponentialRank,
+                finalAmount: calc.finalAmount,
+                percentage: calc.percentage
+            })));
 
             const transactions: Array<{
                 to: string;
@@ -156,53 +239,56 @@ export class WalletService {
                 amount: string;
             }> = [];
 
-            // TODO: replace with correct calculation
-            const sumOfScores = projects.reduce((sum, project) => sum + project.score, 0);
-            for (const project of projects) {
-                // TODO: use donation handler contract to send the tokens to the projects
+            let successCount = 0;
+            let failureCount = 0;
+
+            // Process each project distribution
+            for (const calculation of distributionCalculations) {
                 try {
-                    // TODO: Calculate the amount of tokens to send to the project
-                    const amount = (Number(balance) * project.score) / sumOfScores;
-                    const amountInWei = ethers.parseEther(amount.toString());
+                    const amountInWei = ethers.parseEther(calculation.finalAmount.toString());
 
                     // Send sponsored transaction
                     const transactionRequest: SponsoredTransactionRequest = {
                         from: walletAddress,
-                        to: project.walletAddress,
+                        to: calculation.project.walletAddress,
                         value: amountInWei.toString(),
-                        data: distributionTokenContract.interface.encodeFunctionData('transfer', [project.walletAddress, amountInWei]),
+                        data: distributionTokenContract.interface.encodeFunctionData('transfer', [calculation.project.walletAddress, amountInWei]),
                     };
 
                     const result = await this.gelatoService.sendSponsoredTransaction(transactionRequest, wallet.hdPath);
 
                     transactions.push({
-                        to: project.walletAddress,
-                        amount: amount.toString(),
+                        to: calculation.project.walletAddress,
+                        amount: calculation.finalAmount.toString(),
                         taskId: result.taskId,
                         transactionHash: result.transactionHash,
                     });
 
                     projectsDistributionDetails.push({
-                        project,
-                        amount: amount.toString()
+                        project: calculation.project,
+                        amount: calculation.finalAmount.toString()
                     });
 
-                    // TODO: add to database
-                    } catch (error) {
-                    console.error(`Failed to send transaction to ${project.walletAddress}:`, error);
+                    successCount++;
+                    console.log(`Successfully distributed ${calculation.finalAmount} to ${calculation.project.name} (rank: ${calculation.rank})`);
+                } catch (error) {
+                    console.error(`Failed to send transaction to ${calculation.project.walletAddress}:`, error);
+                    failureCount++;
                 }
             }
+
+            const totalDistributed = distributionCalculations.reduce((sum: number, calc: any) => sum + calc.finalAmount, 0);
 
             return {
                 walletAddress,
                 totalBalance: balance,
-                distributedAmount: balance,
+                distributedAmount: totalDistributed.toString(),
                 transactions,
                 summary: {
                     totalRecipients: projects.length,
-                    totalTransactions: 0,
-                    successCount: 0,
-                    failureCount: 0,
+                    totalTransactions: transactions.length,
+                    successCount,
+                    failureCount,
                 },
                 projectsDistributionDetails
             };
