@@ -54,9 +54,30 @@ export class DonationHandlerService {
     async isApproved(walletAddress: string, amount: bigint): Promise<boolean> {
         try {
             const distributionTokenAddress = config.blockchain.tokenAddress;
+            const donationHandlerAddress = config.blockchain.donationHandlerAddress;
+
+            // Validate addresses
+            if (!distributionTokenAddress || !ethers.isAddress(distributionTokenAddress)) {
+                throw new Error(`Invalid token address: ${distributionTokenAddress}`);
+            }
+
+            if (!donationHandlerAddress || !ethers.isAddress(donationHandlerAddress)) {
+                throw new Error(`Invalid donation handler address: ${donationHandlerAddress}`);
+            }
+
+            if (!walletAddress || !ethers.isAddress(walletAddress)) {
+                throw new Error(`Invalid wallet address: ${walletAddress}`);
+            }
+
+            console.log('Checking approval with addresses:', {
+                tokenAddress: distributionTokenAddress,
+                donationHandlerAddress: donationHandlerAddress,
+                walletAddress: walletAddress
+            });
+
             const distributionTokenContract = new ethers.Contract(distributionTokenAddress, erc20Abi, this.provider);
             
-            const allowance = await distributionTokenContract.allowance(walletAddress, config.blockchain.donationHandlerAddress);
+            const allowance = await distributionTokenContract.allowance(walletAddress, donationHandlerAddress);
             return allowance >= amount;
         } catch (error) {
             throw new Error(`Failed to check approval: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -78,6 +99,27 @@ export class DonationHandlerService {
             }
 
             const distributionTokenAddress = config.blockchain.tokenAddress;
+            const donationHandlerAddress = config.blockchain.donationHandlerAddress;
+
+            // Validate addresses
+            if (!distributionTokenAddress || !ethers.isAddress(distributionTokenAddress)) {
+                throw new Error(`Invalid token address: ${distributionTokenAddress}`);
+            }
+
+            if (!donationHandlerAddress || !ethers.isAddress(donationHandlerAddress)) {
+                throw new Error(`Invalid donation handler address: ${donationHandlerAddress}`);
+            }
+
+            if (!walletAddress || !ethers.isAddress(walletAddress)) {
+                throw new Error(`Invalid wallet address: ${walletAddress}`);
+            }
+
+            console.log('Approving with addresses:', {
+                tokenAddress: distributionTokenAddress,
+                donationHandlerAddress: donationHandlerAddress,
+                walletAddress: walletAddress
+            });
+
             const distributionTokenContract = new ethers.Contract(distributionTokenAddress, erc20Abi, this.provider);
 
             // Create sponsored transaction for infinite approval
@@ -86,13 +128,15 @@ export class DonationHandlerService {
                 to: distributionTokenAddress,
                 value: '0', // No ETH value needed for ERC20 approvals
                 data: distributionTokenContract.interface.encodeFunctionData('approve', [
-                    config.blockchain.donationHandlerAddress, // Spender address
+                    donationHandlerAddress, // Spender address
                     amount
                 ]),
             };
 
             // Send sponsored approval transaction
             const result = await this.gelatoService.sendSponsoredTransaction(transactionRequest, walletInfo.hdPath);
+
+            console.log("result", result);
 
             console.log(`Approved ${ethers.formatEther(amount)} GIV for donation handler contract via Gelato`);
             
@@ -125,16 +169,42 @@ export class DonationHandlerService {
                 throw new Error('Wallet not found');
             }
 
-            const amountInWei = ethers.parseEther(recipient.amount);
             const distributionTokenAddress = config.blockchain.tokenAddress;
+            const donationHandlerAddress = config.blockchain.donationHandlerAddress;
+
+            // Validate addresses
+            if (!distributionTokenAddress || !ethers.isAddress(distributionTokenAddress)) {
+                throw new Error(`Invalid token address: ${distributionTokenAddress}`);
+            }
+
+            if (!donationHandlerAddress || !ethers.isAddress(donationHandlerAddress)) {
+                throw new Error(`Invalid donation handler address: ${donationHandlerAddress}`);
+            }
+
+            if (!fromWalletAddress || !ethers.isAddress(fromWalletAddress)) {
+                throw new Error(`Invalid from wallet address: ${fromWalletAddress}`);
+            }
+
+            if (!recipient.address || !ethers.isAddress(recipient.address)) {
+                throw new Error(`Invalid recipient address: ${recipient.address}`);
+            }
+
+            console.log('Sending single donation with addresses:', {
+                tokenAddress: distributionTokenAddress,
+                donationHandlerAddress: donationHandlerAddress,
+                fromWalletAddress: fromWalletAddress,
+                recipientAddress: recipient.address
+            });
+
+            const amountInWei = ethers.parseEther(recipient.amount);
 
             // Create donation handler contract instance
-            const donationHandlerContract = new ethers.Contract(config.blockchain.donationHandlerAddress, donationHandlerAbi, this.provider);
+            const donationHandlerContract = new ethers.Contract(donationHandlerAddress, donationHandlerAbi, this.provider);
 
             // Send sponsored transaction for single donation
             const transactionRequest: SponsoredTransactionRequest = {
                 from: fromWalletAddress,
-                to: config.blockchain.donationHandlerAddress,
+                to: donationHandlerAddress,
                 value: '0', // No ETH value needed for ERC20 donations
                 data: donationHandlerContract.interface.encodeFunctionData('donateERC20', [
                     distributionTokenAddress, // Token address
@@ -182,6 +252,36 @@ export class DonationHandlerService {
                 throw new Error('Wallet not found');
             }
 
+            const distributionTokenAddress = config.blockchain.tokenAddress;
+            const donationHandlerAddress = config.blockchain.donationHandlerAddress;
+
+            // Validate addresses
+            if (!distributionTokenAddress || !ethers.isAddress(distributionTokenAddress)) {
+                throw new Error(`Invalid token address: ${distributionTokenAddress}`);
+            }
+
+            if (!donationHandlerAddress || !ethers.isAddress(donationHandlerAddress)) {
+                throw new Error(`Invalid donation handler address: ${donationHandlerAddress}`);
+            }
+
+            if (!fromWalletAddress || !ethers.isAddress(fromWalletAddress)) {
+                throw new Error(`Invalid from wallet address: ${fromWalletAddress}`);
+            }
+
+            // Validate recipient addresses
+            for (const recipient of recipients) {
+                if (!recipient.address || !ethers.isAddress(recipient.address)) {
+                    throw new Error(`Invalid recipient address: ${recipient.address}`);
+                }
+            }
+
+            console.log('Sending batch donation with addresses:', {
+                tokenAddress: distributionTokenAddress,
+                donationHandlerAddress: donationHandlerAddress,
+                fromWalletAddress: fromWalletAddress,
+                recipientCount: recipients.length
+            });
+
             // Prepare batch donation data
             const recipientAddresses: string[] = [];
             const amounts: bigint[] = [];
@@ -198,13 +298,12 @@ export class DonationHandlerService {
             }
 
             // Create donation handler contract instance
-            const donationHandlerContract = new ethers.Contract(config.blockchain.donationHandlerAddress, donationHandlerAbi, this.provider);
-            const distributionTokenAddress = config.blockchain.tokenAddress;
+            const donationHandlerContract = new ethers.Contract(donationHandlerAddress, donationHandlerAbi, this.provider);
 
             // Send sponsored transaction for batch donation
             const transactionRequest: SponsoredTransactionRequest = {
                 from: fromWalletAddress,
-                to: config.blockchain.donationHandlerAddress,
+                to: donationHandlerAddress,
                 value: '0', // No ETH value needed for ERC20 donations
                 data: donationHandlerContract.interface.encodeFunctionData('donateManyERC20', [
                     distributionTokenAddress, // Token address

@@ -101,12 +101,14 @@ export class GelatoService {
       };
 
       console.log("call data", call);
-
+      
       // Execute the sponsored transaction with type assertion
-      const results = await (smartWalletClient as any).execute({
-        payment: (sponsored as any)(),
+      const results = await smartWalletClient.execute({
+        payment: sponsored(this.sponsorApiKey),
         calls: [call]
       });
+
+      console.log("results", results);
 
       if (!results) {
         throw new Error('Failed to execute sponsored transaction');
@@ -121,6 +123,7 @@ export class GelatoService {
         transactionHash: txHash,
       };
     } catch (error) {
+      console.error("Gelato transaction error:", error);
       throw new Error(`Failed to send sponsored transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }

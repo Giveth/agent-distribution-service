@@ -3,6 +3,8 @@ import { WalletService } from "./services/wallet.service";
 import { config } from "./config";
 import { initializeDataSource } from "./data-source";
 import { ipWhitelistMiddleware } from "./middleware/ip-whitelist";
+import { Project } from "./services/fund-allocation.service";
+import { debugConfiguration, validateAddresses } from "./utils/config-validation.util";
 
 const app = express();
 const router = Router();
@@ -13,6 +15,17 @@ async function initialize() {
   try {
     await initializeDataSource();
     console.log("Database connection initialized");
+    
+    // Debug configuration on startup
+    console.log("\n=== Startup Configuration Check ===");
+    debugConfiguration();
+    
+    const validation = validateAddresses();
+    console.log("Address Validation Results:");
+    console.log("- Token Address:", validation.tokenAddress.isValid ? "✅ Valid" : `❌ Invalid: ${validation.tokenAddress.error}`);
+    console.log("- Donation Handler Address:", validation.donationHandlerAddress.isValid ? "✅ Valid" : `❌ Invalid: ${validation.donationHandlerAddress.error}`);
+    console.log("=== End Startup Check ===\n");
+    
   } catch (error) {
     console.error("Failed to initialize:", error);
     process.exit(1);
@@ -21,13 +34,6 @@ async function initialize() {
 
 interface GenerateWalletRequest {
   index?: number;
-}
-
-interface Project {
-  name: string;
-  slug: string;
-  walletAddress: string;
-  score: number;
 }
 
 interface DistributeFundsRequest {

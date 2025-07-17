@@ -183,9 +183,9 @@ export class WalletService {
 
             // Check if balance is 0 - skip distribution entirely
             if (balanceNumber <= 0) {
-                console.log(`Wallet ${walletAddress} has no balance to distribute - skipping distribution`);
+                console.log(`Wallet ${wallet.address} has no balance to distribute - skipping distribution`);
                 return {
-                    walletAddress,
+                    walletAddress: wallet.address,
                     totalBalance: balance,
                     distributedAmount: "0",
                     transactions: [],
@@ -270,11 +270,11 @@ export class WalletService {
                         recipients.reduce((sum, recipient) => sum + parseFloat(recipient.amount), 0).toString()
                     );
                     
-                    const isApproved = await this.donationHandlerService.isApproved(walletAddress, totalAmountWei);
+                    const isApproved = await this.donationHandlerService.isApproved(wallet.address, totalAmountWei);
                     
                     if (!isApproved) {
                         console.log(`Approval needed for ${ethers.formatEther(totalAmountWei)} GIV. Approving...`);
-                        const approvalResult = await this.donationHandlerService.approve(walletAddress);
+                        const approvalResult = await this.donationHandlerService.approve(wallet.address);
                         if (!approvalResult.success) {
                             throw new Error(`Failed to approve donation handler: ${approvalResult.error}`);
                         }
@@ -282,7 +282,7 @@ export class WalletService {
                     }
 
                     // Send batch donation
-                    const donationResult = await this.donationHandlerService.sendBatchDonation(walletAddress, recipients);
+                    const donationResult = await this.donationHandlerService.sendBatchDonation(wallet.address, recipients);
 
                     if (donationResult.success) {
                         transactions.push({
@@ -306,7 +306,7 @@ export class WalletService {
             const totalDistributed = distributionCalculations.reduce((sum: number, calc: any) => sum + calc.finalAmount, 0);
 
             return {
-                walletAddress,
+                walletAddress: wallet.address,
                 totalBalance: balance,
                 distributedAmount: totalDistributed.toString(),
                 transactions,
