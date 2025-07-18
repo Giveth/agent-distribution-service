@@ -23,9 +23,12 @@ export class TransactionService {
   private feeRefillerService: FeeRefillerService;
   private seedPhrase: string;
 
+  private provider: ethers.JsonRpcProvider;
+
   constructor() {
     this.feeRefillerService = new FeeRefillerService();
     this.seedPhrase = config.blockchain.seedPhrase;
+    this.provider = new ethers.JsonRpcProvider(config.blockchain.rpcUrl);
   }
 
   /**
@@ -37,7 +40,7 @@ export class TransactionService {
   async sendTransaction(request: TransactionRequest, hdPath: string): Promise<TransactionResponse> {
     try {
       // Derive wallet from seed phrase using HD path
-      const wallet = deriveWalletFromSeedPhrase(this.seedPhrase, hdPath);
+      const wallet = deriveWalletFromSeedPhrase(this.seedPhrase, hdPath, this.provider);
       
       if (!wallet) {
         throw new Error('Failed to derive wallet from seed phrase');
