@@ -10,6 +10,7 @@ services:
       - ./certs:/usr/src/app/certs:ro
     networks:
       - agent-distribution-service
+    restart: unless-stopped
 
 networks:
   agent-distribution-service:
