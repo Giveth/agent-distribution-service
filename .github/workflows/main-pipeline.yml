@@ -1,0 +1,54 @@
+name: main-pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Login to GitHub Container Registry
+        run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      - name: Build image and push to GitHub Packages
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          no-cache: true
+          repository: giveth/agent-distribution-service
+          tags: |
+            ghcr.io/giveth/agent-distribution-service:latest
+
+  deploy:
+    needs: publish
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH and Redeploy
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_PRIVATE_KEY }}
+          port: ${{ secrets.SSH_PORT }}
+          script: |
+            cd agent-distribution-service
+            git checkout main
+            git pull
+            docker compose -f docker-compose-production.yml down
+            docker compose -f docker-compose-production.yml pull
+            docker compose -f docker-compose-production.yml up -d agent-distribution-service
+            docker image prune -a --force
+            sleep 20
+            docker logs agent-distribution-service
