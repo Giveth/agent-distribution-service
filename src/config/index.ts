@@ -33,6 +33,12 @@ export const config: AppConfig = {
     seedPhrase: process.env.SEED_PHRASE || baseConfig.blockchain.seedPhrase,
     rpcUrl: process.env.RPC_URL || baseConfig.blockchain.rpcUrl,
     chainId: Number(process.env.CHAIN_ID) || baseConfig.blockchain.chainId,
+    tokenAddress: process.env.TOKEN_ADDRESS || baseConfig.blockchain.tokenAddress,
+    donationHandlerAddress: process.env.DONATION_HANDLER_ADDRESS || baseConfig.blockchain.donationHandlerAddress,
+  },
+  feeRefiller: {
+    privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || baseConfig.feeRefiller.privateKey,
+    refillFactor: Number(process.env.FEE_REFILL_FACTOR) || baseConfig.feeRefiller.refillFactor,
   },
   environment: env as 'development' | 'production',
 }; 
