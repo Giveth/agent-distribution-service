@@ -22,10 +22,9 @@ export const productionConfig: AppConfig = {
     tokenAddress: "0xc7B1807822160a8C5b6c9EaF5C584aAD0972deeC", // GIV token address
     donationHandlerAddress: "0x6e349c56f512cb4250276bf36335c8dd618944a1", // Donation handler contract address
   },
-  gelato: {
-    sponsorApiKey: process.env.GELATO_SPONSOR_API_KEY || "",
-    sponsorUrl: "https://relay.gelato.digital",
-    chainId: 137, // Polygon mainnet
+  feeRefiller: {
+    privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || "",
+    refillFactor: 1.5, // 50% extra for safety
   },
   environment: 'production',
 }; 

@@ -44,13 +44,9 @@ export function debugConfiguration() {
     console.log('- DONATION_HANDLER_ADDRESS:', process.env.DONATION_HANDLER_ADDRESS || '[NOT SET]');
     console.log('- RPC_URL:', process.env.RPC_URL || '[NOT SET]');
     console.log('- SEED_PHRASE:', process.env.SEED_PHRASE ? '[SET]' : '[NOT SET]');
-    
-    // Check Gelato configuration
-    console.log('\nGelato Config:');
-    console.log('- Sponsor API Key:', config.gelato.sponsorApiKey ? '[SET]' : '[NOT SET]');
-    console.log('- Sponsor URL:', config.gelato.sponsorUrl);
-    console.log('- Gelato Chain ID:', config.gelato.chainId);
-    
+    console.log('- FEE_REFILLER_PRIVATE_KEY:', process.env.FEE_REFILLER_PRIVATE_KEY ? '[SET]' : '[NOT SET]');
+    console.log('- FEE_REFILL_FACTOR:', process.env.FEE_REFILL_FACTOR || '[NOT SET]');
+
     console.log('=== End Configuration Debug ===\n');
 }
 

@@ -36,10 +36,9 @@ export const config: AppConfig = {
     tokenAddress: process.env.TOKEN_ADDRESS || baseConfig.blockchain.tokenAddress,
     donationHandlerAddress: process.env.DONATION_HANDLER_ADDRESS || baseConfig.blockchain.donationHandlerAddress,
   },
-  gelato: {
-    sponsorApiKey: process.env.GELATO_SPONSOR_API_KEY || baseConfig.gelato.sponsorApiKey,
-    sponsorUrl: process.env.GELATO_SPONSOR_URL || baseConfig.gelato.sponsorUrl,
-    chainId: Number(process.env.GELATO_CHAIN_ID) || baseConfig.gelato.chainId,
+  feeRefiller: {
+    privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || baseConfig.feeRefiller.privateKey,
+    refillFactor: Number(process.env.FEE_REFILL_FACTOR) || baseConfig.feeRefiller.refillFactor,
   },
   environment: env as 'development' | 'production',
 }; 

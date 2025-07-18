@@ -3,7 +3,6 @@ import { WalletService } from './wallet.service';
 import { Project } from './fund-allocation.service';
 import { ethers } from 'ethers';
 import sinon from 'sinon';
-import * as walletUtil from '../utils/wallet.util';
 
 describe('WalletService', () => {
   let service: WalletService;
@@ -15,6 +14,7 @@ describe('WalletService', () => {
     // Mock environment variables with test values
     process.env.SEED_PHRASE = 'test test test test test test test test test test test test test junk';
     process.env.RPC_URL = 'https://polygon-rpc.com';
+    process.env.FEE_REFILLER_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
 
     // Create mock wallet
     mockWallet = {
@@ -26,6 +26,8 @@ describe('WalletService', () => {
     // Mock provider
     mockProvider = {
       getBalance: sinon.stub(),
+      // Mock contract calls
+      call: sinon.stub().resolves(ethers.parseEther('100.5')),
     };
 
     // Mock repository
@@ -40,12 +42,26 @@ describe('WalletService', () => {
     service = new WalletService();
     service['provider'] = mockProvider;
     service['walletRepository'] = mockWalletRepository;
+
+    // Mock ethers.Contract globally for all tests
+    const mockContract = {
+      balanceOf: sinon.stub().resolves(ethers.parseEther('100.5')),
+      interface: {
+        encodeFunctionData: sinon.stub().returns('0x'),
+      },
+      // Mock the contract runner
+      runner: {
+        call: sinon.stub().resolves(ethers.parseEther('100.5')),
+      },
+    };
+    sinon.stub(ethers, 'Contract').returns(mockContract as any);
   });
 
   afterEach(() => {
     sinon.restore();
     delete process.env.SEED_PHRASE;
     delete process.env.RPC_URL;
+    delete process.env.FEE_REFILLER_PRIVATE_KEY;
   });
 
   describe('generateWallet', () => {
@@ -109,62 +125,6 @@ describe('WalletService', () => {
     });
   });
 
-  describe('sendTransaction', () => {
-    it('should send transaction and return hash', async () => {
-      const txHash = '0xabc';
-      mockWallet.sendTransaction.resolves({ hash: txHash });
-      
-      // Mock the deriveWalletFromSeedPhrase function
-      sinon.stub(walletUtil, 'deriveWalletFromSeedPhrase').returns(mockWallet);
-
-      // Mock repository to return wallet info
-      mockWalletRepository.findByAddress.resolves({
-        address: '0x123',
-        hdPath: "m/44'/60'/0'/0/0",
-      });
-
-      const result = await service.sendTransaction('0x123', '0x456', '1.0');
-
-      expect(result).to.equal(txHash);
-      expect(mockWallet.sendTransaction.calledWith({
-        to: '0x456',
-        value: ethers.parseEther('1.0'),
-      })).to.be.true;
-    });
-
-    it('should throw error when wallet is not found', async () => {
-      mockWalletRepository.findByAddress.resolves(null);
-
-      try {
-        await service.sendTransaction('0x123', '0x456', '1.0');
-        expect.fail('Should have thrown an error');
-      } catch (err: any) {
-        expect(err.message).to.equal('Failed to send transaction: Wallet not found');
-      }
-    });
-
-    it('should throw error when transaction fails', async () => {
-      const error = new Error('Transaction failed');
-      mockWallet.sendTransaction.rejects(error);
-      
-      // Mock the deriveWalletFromSeedPhrase function
-      sinon.stub(walletUtil, 'deriveWalletFromSeedPhrase').returns(mockWallet);
-
-      // Mock repository to return wallet info
-      mockWalletRepository.findByAddress.resolves({
-        address: '0x123',
-        hdPath: "m/44'/60'/0'/0/0",
-      });
-
-      try {
-        await service.sendTransaction('0x123', '0x456', '1.0');
-        expect.fail('Should have thrown an error');
-      } catch (err: any) {
-        expect(err.message).to.equal('Failed to send transaction: Transaction failed');
-      }
-    });
-  });
-
   describe('getManagedWallets', () => {
     it('should return all managed wallets', async () => {
       const wallets = [
@@ -224,6 +184,31 @@ describe('WalletService', () => {
       }
     });
   });
+
+  describe('distributeFunds', () => {
+    it('should throw error when no projects provided', async () => {
+      try {
+        await service.distributeFunds('0x1234567890123456789012345678901234567890', []);
+        expect.fail('Should have thrown an error');
+      } catch (err: any) {
+        expect(err.message).to.equal('Failed to distribute funds: No projects to distribute funds to');
+      }
+    });
+
+    it('should throw error when wallet not found', async () => {
+      mockWalletRepository.findByAddress.resolves(null);
+
+      const projects = [
+        { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x4567890123456789012345678901234567890123', score: 90 }
+      ];
+
+      try {
+        await service.distributeFunds('0x1234567890123456789012345678901234567890', projects);
+        expect.fail('Should have thrown an error');
+      } catch (err: any) {
+        expect(err.message).to.equal('Failed to distribute funds: Wallet 0x1234567890123456789012345678901234567890 not found in database');
+      }
+    });
 }); 
 
 describe('WalletService - Balance Conditional Logic', () => {
@@ -334,14 +319,15 @@ describe('WalletService - Distribution Integration', () => {
         // Mock the dependencies
         process.env.SEED_PHRASE = 'test seed phrase for testing purposes only';
         process.env.RPC_URL = 'https://test.rpc.url';
+        process.env.FEE_REFILLER_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
         
         walletService = new WalletService();
     });
 
-    describe('distributeFunds with DistributionService', () => {
-        it('should use DistributionService for calculations', () => {
-            // This test verifies that the WalletService properly integrates with DistributionService
-            // The actual distribution logic is tested in DistributionService tests
+    describe('distributeFunds with FundAllocationService', () => {
+        it('should use FundAllocationService for calculations', () => {
+            // This test verifies that the WalletService properly integrates with FundAllocationService
+            // The actual distribution logic is tested in FundAllocationService tests
             const projects: Project[] = [
                 { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90 },
                 { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: 80 }
@@ -473,4 +459,5 @@ describe('WalletService - Distribution Integration', () => {
             });
         });
     });
-}); 
+  });
+});

@@ -22,16 +22,15 @@ export interface BlockchainConfig {
   donationHandlerAddress: string;
 }
 
-export interface GelatoConfig {
-  sponsorApiKey: string;
-  sponsorUrl: string;
-  chainId: number;
+export interface FeeRefillerConfig {
+  privateKey: string;
+  refillFactor: number; // Multiplier for fee amount (e.g., 1.5 = 50% extra)
 }
 
 export interface AppConfig {
   server: ServerConfig;
   database: DatabaseConfig;
   blockchain: BlockchainConfig;
-  gelato: GelatoConfig;
+  feeRefiller: FeeRefillerConfig;
   environment: 'development' | 'staging' | 'production';
 } 

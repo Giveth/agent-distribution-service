@@ -1,12 +1,10 @@
 import { ethers, HDNodeWallet } from 'ethers';
 import { WalletRepository } from '../repositories/wallet.repository';
-import { GelatoService, SponsoredTransactionRequest } from './gelato.service';
-import { FundAllocationService, Project, DistributionCalculation } from './fund-allocation.service';
+import { TransactionService } from './transaction.service';
+import { FundAllocationService, Project } from './fund-allocation.service';
 import { DonationHandlerService, DonationRecipient } from './donation-handler.service';
 import { config } from '../config';
 import { erc20Abi } from 'viem';
-import { deriveWalletFromSeedPhrase } from '../utils/wallet.util';
-
 
 export interface WalletInfo {
     address: string;    
@@ -20,7 +18,6 @@ export interface DistributionResult {
     transactions: Array<{
         to: string;
         amount: string;
-        taskId: string;
         transactionHash?: string;
     }>;
     summary: {
@@ -38,7 +35,7 @@ export interface DistributionResult {
 export class WalletService {
     private provider: ethers.JsonRpcProvider;
     private walletRepository: WalletRepository;
-    private gelatoService: GelatoService;
+    private transactionService: TransactionService;
     private fundAllocationService: FundAllocationService;
     private donationHandlerService: DonationHandlerService;
     private baseHDPath: string = "m/44'/60'/0'/0/";
@@ -51,7 +48,7 @@ export class WalletService {
 
         this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
         this.walletRepository = new WalletRepository();
-        this.gelatoService = new GelatoService();
+        this.transactionService = new TransactionService();
         this.fundAllocationService = new FundAllocationService();
         this.donationHandlerService = new DonationHandlerService();
 
@@ -233,7 +230,6 @@ export class WalletService {
             const transactions: Array<{
                 to: string;
                 amount: string;
-                taskId: string;
                 transactionHash?: string;
             }> = [];
             
@@ -288,7 +284,6 @@ export class WalletService {
                         transactions.push({
                             to: this.donationHandlerService.getContractAddress(),
                             amount: donationResult.totalAmount,
-                            taskId: donationResult.taskId,
                             transactionHash: donationResult.transactionHash,
                         });
 
@@ -321,76 +316,6 @@ export class WalletService {
 
         } catch (error) {
             throw new Error(`Failed to distribute funds: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-    }
-
-    // TODO: remove this method after testing
-    /**
-     * Send ETH using Gelato sponsored transaction
-     * @param fromAddress Sender's address
-     * @param toAddress Recipient's address
-     * @param amount Amount in ETH
-     * @param hdPath HD path for the sender wallet
-     * @returns Transaction details
-     */
-    async sendSponsoredTransaction(
-        fromAddress: string,
-        toAddress: string,
-        amount: string,
-        hdPath: string
-    ): Promise<{ taskId: string; userOpHash: string; transactionHash?: string }> {
-        try {
-            // Create the transaction data
-            const transactionRequest: SponsoredTransactionRequest = {
-                from: fromAddress,
-                to: toAddress,
-                value: amount,
-                data: '0x', // Simple ETH transfer
-            };
-
-            // Send via Gelato sponsored transaction
-            return await this.gelatoService.sendSponsoredTransaction(transactionRequest, hdPath);
-        } catch (error) {
-            throw new Error(`Failed to send sponsored transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
-    }
-
-
-    // TODO: remove this method after testing
-    /**
-     * Send ETH using traditional transaction (fallback)
-     * @param fromAddress Sender's address
-     * @param toAddress Recipient's address
-     * @param amount Amount in ETH
-     * @returns Transaction hash
-     */
-    async sendTransaction(
-        fromAddress: string,
-        toAddress: string,
-        amount: string
-    ): Promise<string> {
-        try {
-            // Get wallet info from repository
-            const walletInfo = await this.walletRepository.findByAddress(fromAddress);
-            if (!walletInfo) {
-                throw new Error('Wallet not found');
-            }
-
-            // Derive wallet from seed phrase using HD path
-            const wallet = deriveWalletFromSeedPhrase(this.seedPhrase, walletInfo.hdPath);
-
-            if (!wallet) {
-                throw new Error('Wallet not found. Please generate or import the wallet first.');
-            }
-
-            const tx = await wallet.sendTransaction({
-                to: toAddress,
-                value: ethers.parseEther(amount)
-            });
-
-            return tx.hash;
-        } catch (error) {
-            throw new Error(`Failed to send transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
     }
 

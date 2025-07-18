@@ -1,9 +1,8 @@
 import { ethers } from 'ethers';
 import { config } from '../config';
 import { erc20Abi } from 'viem';
-import { deriveWalletFromSeedPhrase } from '../utils/wallet.util';
 import { WalletRepository } from '../repositories/wallet.repository';
-import { GelatoService, SponsoredTransactionRequest } from './gelato.service';
+import { TransactionService, TransactionRequest } from './transaction.service';
 import { donationHandlerAbi } from '../contracts/donation-handler.abi';
 
 export interface DonationRecipient {
@@ -13,7 +12,6 @@ export interface DonationRecipient {
 }
 
 export interface BatchDonationResult {
-    taskId: string;
     transactionHash?: string;
     totalAmount: string;
     recipientCount: number;
@@ -31,18 +29,12 @@ export interface ApprovalResult {
 export class DonationHandlerService {
     private provider: ethers.JsonRpcProvider;
     private walletRepository: WalletRepository;
-    private gelatoService: GelatoService;
-    private seedPhrase: string;
+    private transactionService: TransactionService;
 
     constructor() {
-        if (!process.env.SEED_PHRASE) {
-            throw new Error('SEED_PHRASE environment variable is required');
-        }
-
         this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
         this.walletRepository = new WalletRepository();
-        this.gelatoService = new GelatoService();
-        this.seedPhrase = config.blockchain.seedPhrase;
+        this.transactionService = new TransactionService();
     }
 
     /**
@@ -122,8 +114,8 @@ export class DonationHandlerService {
 
             const distributionTokenContract = new ethers.Contract(distributionTokenAddress, erc20Abi, this.provider);
 
-            // Create sponsored transaction for infinite approval
-            const transactionRequest: SponsoredTransactionRequest = {
+            // Create transaction for infinite approval
+            const transactionRequest: TransactionRequest = {
                 from: walletAddress,
                 to: distributionTokenAddress,
                 value: '0', // No ETH value needed for ERC20 approvals
@@ -133,12 +125,10 @@ export class DonationHandlerService {
                 ]),
             };
 
-            // Send sponsored approval transaction
-            const result = await this.gelatoService.sendSponsoredTransaction(transactionRequest, walletInfo.hdPath);
+            // Send approval transaction
+            const result = await this.transactionService.sendTransaction(transactionRequest, walletInfo.hdPath);
 
-            console.log("result", result);
-
-            console.log(`Approved ${ethers.formatEther(amount)} GIV for donation handler contract via Gelato`);
+            console.log(`Approved ${ethers.formatEther(amount)} GIV for donation handler contract`);
             
             return {
                 transactionHash: result.transactionHash || '',
@@ -201,8 +191,8 @@ export class DonationHandlerService {
             // Create donation handler contract instance
             const donationHandlerContract = new ethers.Contract(donationHandlerAddress, donationHandlerAbi, this.provider);
 
-            // Send sponsored transaction for single donation
-            const transactionRequest: SponsoredTransactionRequest = {
+            // Send transaction for single donation
+            const transactionRequest: TransactionRequest = {
                 from: fromWalletAddress,
                 to: donationHandlerAddress,
                 value: '0', // No ETH value needed for ERC20 donations
@@ -214,10 +204,9 @@ export class DonationHandlerService {
                 ]),
             };
 
-            const result = await this.gelatoService.sendSponsoredTransaction(transactionRequest, walletInfo.hdPath);
+            const result = await this.transactionService.sendTransaction(transactionRequest, walletInfo.hdPath);
 
             return {
-                taskId: result.taskId,
                 transactionHash: result.transactionHash,
                 totalAmount: recipient.amount,
                 recipientCount: 1,
@@ -225,7 +214,6 @@ export class DonationHandlerService {
             };
         } catch (error) {
             return {
-                taskId: '',
                 totalAmount: recipient.amount,
                 recipientCount: 1,
                 success: false,
@@ -300,8 +288,8 @@ export class DonationHandlerService {
             // Create donation handler contract instance
             const donationHandlerContract = new ethers.Contract(donationHandlerAddress, donationHandlerAbi, this.provider);
 
-            // Send sponsored transaction for batch donation
-            const transactionRequest: SponsoredTransactionRequest = {
+            // Send transaction for batch donation
+            const transactionRequest: TransactionRequest = {
                 from: fromWalletAddress,
                 to: donationHandlerAddress,
                 value: '0', // No ETH value needed for ERC20 donations
@@ -314,10 +302,9 @@ export class DonationHandlerService {
                 ]),
             };
 
-            const result = await this.gelatoService.sendSponsoredTransaction(transactionRequest, walletInfo.hdPath);
+            const result = await this.transactionService.sendTransaction(transactionRequest, walletInfo.hdPath);
 
             return {
-                taskId: result.taskId,
                 transactionHash: result.transactionHash,
                 totalAmount: ethers.formatEther(totalAmountWei),
                 recipientCount: recipients.length,
@@ -325,7 +312,6 @@ export class DonationHandlerService {
             };
         } catch (error) {
             return {
-                taskId: '',
                 totalAmount: '0',
                 recipientCount: recipients.length,
                 success: false,

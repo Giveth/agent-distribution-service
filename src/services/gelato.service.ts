@@ -27,7 +27,8 @@ export class GelatoService {
   private seedPhrase: string;
 
   constructor() {
-    this.sponsorApiKey = config.gelato.sponsorApiKey;
+    // this.sponsorApiKey = config.gelato.sponsorApiKey;
+    this.sponsorApiKey = process.env.GELATO_SPONSOR_API_KEY || "";
     this.seedPhrase = config.blockchain.seedPhrase;
     this.publicClient = createPublicClient({
       chain: polygon,

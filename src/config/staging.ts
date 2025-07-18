@@ -22,10 +22,9 @@ export const stagingConfig: AppConfig = {
     tokenAddress: "0xc20CAf8deE81059ec0c8E5971b2AF7347eC131f4", // TPOL token address
     donationHandlerAddress: "0x6e349c56f512cb4250276bf36335c8dd618944a1", // Donation handler contract address
   },
-  gelato: {
-    sponsorApiKey: process.env.GELATO_SPONSOR_API_KEY || "",
-    sponsorUrl: "https://relay.gelato.digital",
-    chainId: 137, // Polygon mainnet
+  feeRefiller: {
+    privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || "",
+    refillFactor: 1.5, // 50% extra for safety
   },
   environment: "staging",
 };

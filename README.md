@@ -1,12 +1,12 @@
-# FundDistributer - Ethereum Wallet Service with Gas Sponsorship
+# FundDistributer - Ethereum Wallet Service with Fee Refilling
 
-A TypeScript service for managing Ethereum wallets with PostgreSQL database integration and Gelato gas sponsorship. This service provides functionality to generate and manage Ethereum wallets using HD (Hierarchical Deterministic) paths, with all transactions sponsored by default.
+A TypeScript service for managing Ethereum wallets with PostgreSQL database integration and automatic fee refilling. This service provides functionality to generate and manage Ethereum wallets using HD (Hierarchical Deterministic) paths, with automatic fee refilling before each transaction.
 
 ## Features
 
 - Generate Ethereum wallets with HD paths
 - Store wallet information in PostgreSQL
-- Gelato gas sponsorship for all transactions
+- Automatic fee refilling before transactions
 - Automatic fund distribution with calculations
 - Donation Handler Contract Integration - Uses specialized contract for secure donations
 - Batch Donation Support - Efficiently distribute funds to multiple recipients in a single transaction
@@ -21,7 +21,7 @@ A TypeScript service for managing Ethereum wallets with PostgreSQL database inte
 - Node.js (v14 or higher)
 - Docker and Docker Compose
 - PostgreSQL (if running without Docker)
-- Gelato Sponsor API Key (for gas sponsorship)
+- Fee Refiller Private Key (for automatic fee refilling)
 
 ## Setup
 
@@ -36,12 +36,10 @@ cd <repository-name>
 npm install
 ```
 
-3. Get a Gelato Sponsor API Key:
-   - Visit [Gelato App](https://app.gelato.network/)
-   - Navigate to the Relay section
-   - Create a new app
-   - Select Polygon network (chain ID: 137)
-   - Copy the generated Sponsor API Key
+3. Set up fee refiller wallet:
+   - Create a wallet with POL tokens for fee refilling
+   - This wallet will automatically refill the pool address before transactions
+   - Ensure the wallet has sufficient POL balance
 
 4. Create a `.env` file in the root directory:
 ```env
@@ -50,10 +48,9 @@ SEED_PHRASE="your seed phrase here"
 RPC_URL="https://polygon-rpc.com"
 CHAIN_ID=137
 
-# Gelato Configuration
-GELATO_SPONSOR_API_KEY="your_gelato_sponsor_api_key_here"
-GELATO_SPONSOR_URL="https://relay.gelato.digital"
-GELATO_CHAIN_ID=137
+# Fee Refiller Configuration
+FEE_REFILLER_PRIVATE_KEY="your_fee_refiller_private_key_here"
+FEE_REFILL_FACTOR=1.5
 
 # Blockchain Configuration
 TOKEN_ADDRESS="0xc7B1807822160a8C5b6c9EaF5C584aAD0972deeC"
@@ -155,13 +152,11 @@ Response:
     {
       "to": "0x1234567890123456789012345678901234567890",
       "amount": "566.67",
-      "taskId": "gelato_task_id_1",
       "transactionHash": "0x..."
     },
     {
       "to": "0x0987654321098765432109876543210987654321",
       "amount": "433.33",
-      "taskId": "gelato_task_id_2",
       "transactionHash": "0x..."
     }
   ],
@@ -200,7 +195,7 @@ Response:
 When a new wallet is generated for a cause:
 - The wallet is created using HD derivation from the seed phrase
 - The HD path is stored in the database (e.g., "m/44'/60'/0'/0/0")
-- All future transactions from this wallet will be sponsored
+- All future transactions from this wallet will use fee refilling
 
 ### 2. Fund Distribution
 When you call the distribute-funds endpoint:
@@ -214,16 +209,16 @@ When you call the distribute-funds endpoint:
 The system distributes funds proportionally based on project scores:
 - Calculates total score sum across all projects
 - Each project receives: `(project_score / total_score) * total_balance`
-- All transactions are automatically sponsored by Gelato
+- All transactions are automatically handled with fee refilling
 
-### 4. Gas Sponsorship
-All transactions are automatically sponsored by Gelato:
-- Approval Transactions: ERC-20 token approvals are sponsored
-- Donation Transactions: All donation transactions are sponsored
-- No POL balance required in the sender's wallet
-- Gas fees are covered by your Gelato sponsor account
-- Transactions are executed on Polygon network
-- Automatic retry and error handling
+### 4. Fee Refilling
+Before each transaction, the system automatically refills the distributing wallet:
+- **Fee Estimation**: Calculates estimated gas fees for the transaction (including ERC20 approvals and donation handler calls)
+- **Balance Check**: Checks if the distributing wallet has sufficient POL balance for the specific transaction fee
+- **Automatic Refilling**: If balance is insufficient for the transaction, refills from fee refiller wallet
+- **Refill Factor**: Applies a multiplier (default 1.5x) for safety buffer
+- **Transaction Execution**: Proceeds with the transaction after ensuring sufficient balance
+- **Error Handling**: Handles refill failures gracefully
 
 ### 5. Donation Handler Contract
 The system uses a specialized donation handler contract for secure and efficient donations:
@@ -234,11 +229,25 @@ The system uses a specialized donation handler contract for secure and efficient
 - **Enhanced Security**: Uses dedicated contract for donation logic
 - **Gas Efficiency**: Reduces gas costs through batch processing and infinite approvals
 
+## Configuration
+
+### Fee Refiller Settings
+
+- **FEE_REFILLER_PRIVATE_KEY**: Private key of the wallet that will refill fees
+- **FEE_REFILL_FACTOR**: Multiplier for fee amount (default: 1.5 = 50% extra)
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `FEE_REFILLER_PRIVATE_KEY` | Private key for fee refiller wallet | Required |
+| `FEE_REFILL_FACTOR` | Fee refill multiplier | 1.5 |
+
 ## Benefits
 
-1. **Seamless Onboarding**: New causes can start distributing immediately without needing POL
-2. **Uninterrupted Operations**: Existing causes won't be blocked by insufficient gas
-3. **Cost Predictability**: Gas costs are sponsored and predictable
+1. **Automatic Fee Management**: No manual intervention needed for gas fees
+2. **Cost Control**: Predictable fee costs with configurable refill factor
+3. **Reliability**: Ensures transactions don't fail due to insufficient gas
 4. **Better UX**: Users don't need to manage native tokens
 5. **Score-Based Distribution**: Fair distribution based on project scores
 6. **ERC-20 Token Support**: Distributes specific tokens, not just native currency
