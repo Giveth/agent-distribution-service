@@ -3,6 +3,8 @@ import { WalletService } from "./services/wallet.service";
 import { config } from "./config";
 import { initializeDataSource } from "./data-source";
 import { ipWhitelistMiddleware } from "./middleware/ip-whitelist";
+import { Project } from "./services/fund-allocation.service";
+import { debugConfiguration, validateAddresses } from "./utils/config-validation.util";
 
 const app = express();
 const router = Router();
@@ -13,6 +15,17 @@ async function initialize() {
   try {
     await initializeDataSource();
     console.log("Database connection initialized");
+    
+    // Debug configuration on startup
+    console.log("\n=== Startup Configuration Check ===");
+    debugConfiguration();
+    
+    const validation = validateAddresses();
+    console.log("Address Validation Results:");
+    console.log("- Token Address:", validation.tokenAddress.isValid ? "✅ Valid" : `❌ Invalid: ${validation.tokenAddress.error}`);
+    console.log("- Donation Handler Address:", validation.donationHandlerAddress.isValid ? "✅ Valid" : `❌ Invalid: ${validation.donationHandlerAddress.error}`);
+    console.log("=== End Startup Check ===\n");
+    
   } catch (error) {
     console.error("Failed to initialize:", error);
     process.exit(1);
@@ -23,8 +36,9 @@ interface GenerateWalletRequest {
   index?: number;
 }
 
-interface GenerateMultipleWalletsRequest {
-  count: number;
+interface DistributeFundsRequest {
+  walletAddress: string;
+  projects: Project[];
 }
 
 // Add JSON parsing middleware
@@ -66,6 +80,24 @@ router.get("/wallets", async (req: Request, res: Response) => {
     });
   }
 });
+
+// Distribute funds from a wallet
+router.post(
+  "/distribute-funds",
+  async (req: Request<{}, {}, DistributeFundsRequest>, res: Response) => {
+    try {
+      console.log("Distribute funds endpoint hit");
+      const { walletAddress, projects } = req.body;
+      
+      const result = await walletService.distributeFunds(walletAddress, projects);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+);
 
 // Basic health check endpoint
 app.get("/api/health", (req: Request, res: Response) => {

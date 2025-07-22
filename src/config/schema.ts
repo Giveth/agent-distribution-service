@@ -18,11 +18,20 @@ export interface BlockchainConfig {
   seedPhrase: string;
   rpcUrl: string;
   chainId: number;
+  tokenAddress: string;
+  donationHandlerAddress: string;
+}
+
+export interface FeeRefillerConfig {
+  privateKey: string;
+  refillFactor: number; // Multiplier for fee amount (e.g., 1.5 = 50% extra)
 }
 
 export interface AppConfig {
   server: ServerConfig;
   database: DatabaseConfig;
   blockchain: BlockchainConfig;
+  feeRefiller: FeeRefillerConfig;
+  impactGraphUrl: string;
   environment: 'development' | 'staging' | 'production';
 } 

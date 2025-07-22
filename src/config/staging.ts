@@ -19,6 +19,13 @@ export const stagingConfig: AppConfig = {
     seedPhrase: "",
     rpcUrl: "https://polygon-rpc.com",
     chainId: 137, // Polygon mainnet chain ID
+    tokenAddress: "0xc20CAf8deE81059ec0c8E5971b2AF7347eC131f4", // TPOL token address
+    donationHandlerAddress: "0x6e349c56f512cb4250276bf36335c8dd618944a1", // Donation handler contract address
   },
+  feeRefiller: {
+    privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || "",
+    refillFactor: 1.5, // 50% extra for safety
+  },
+  impactGraphUrl: 'https://impact-graph.serve.giveth.io/graphql',
   environment: "staging",
 };
