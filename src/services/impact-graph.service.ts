@@ -45,12 +45,16 @@ export class ImpactGraphService {
     /**
      * Convert distribution data to GraphQL input format
      * @param projectsDistributionDetails Array of project distribution details
+     * @param causeId Cause ID
      * @returns Array of UpdateCauseProjectDistributionInput objects
      */
-    private async convertToGraphQLInput(projectsDistributionDetails: Array<{
-        project: Project;
-        amount: string;
-    }>): Promise<UpdateCauseProjectDistributionInput[]> {
+    private async convertToGraphQLInput(
+        projectsDistributionDetails: Array<{
+            project: Project;
+            amount: string;
+        }>,
+        causeId: number
+    ): Promise<UpdateCauseProjectDistributionInput[]> {
         // Get current distribution token price
         const tokenPrice = await this.coinGeckoService.getTokenPrice();
         
@@ -59,7 +63,7 @@ export class ImpactGraphService {
             const usdValue = tokenAmount * tokenPrice;
             
             return {
-                causeId: project.causeId,
+                causeId,
                 projectId: project.projectId,
                 amountReceived: tokenAmount,
                 amountReceivedUsdValue: usdValue
@@ -121,18 +125,19 @@ export class ImpactGraphService {
     /**
      * Sync distribution data to GraphQL endpoint
      * @param projectsDistributionDetails Array of project distribution details
+     * @param causeId Cause ID
      * @returns Success status and response data
      */
     async syncDistributionData(projectsDistributionDetails: Array<{
         project: Project;
         amount: string;
-    }>): Promise<{
+    }>, causeId: number): Promise<{
         success: boolean;
         data?: BulkUpdateCauseProjectDistributionResponse[];
         error?: string;
     }> {
         try {
-            const updates = await this.convertToGraphQLInput(projectsDistributionDetails);
+            const updates = await this.convertToGraphQLInput(projectsDistributionDetails, causeId);
             
             if (updates.length === 0) {
                 return {

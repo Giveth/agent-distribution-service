@@ -20,10 +20,8 @@ describe('Distribution Relationship', () => {
             // Mock distribution result
             const mockProjects: Project[] = [
                 {
-                    id: '1',
                     slug: 'test-project-1',
                     projectId: 1,
-                    causeId: 101,
                     name: 'Test Project 1',
                     walletAddress: '0x1234567890123456789012345678901234567890',
                     rank: 1,
@@ -31,10 +29,8 @@ describe('Distribution Relationship', () => {
                     usdValue: 1.2
                 },
                 {
-                    id: '2',
                     slug: 'test-project-2',
                     projectId: 2,
-                    causeId: 102,
                     name: 'Test Project 2',
                     walletAddress: '0x2345678901234567890123456789012345678901',
                     rank: 2,
@@ -73,7 +69,7 @@ describe('Distribution Relationship', () => {
             };
 
             // Save distribution
-            const savedDistribution = await distributionRepository.saveDistribution(mockDistributionResult);
+            const savedDistribution = await distributionRepository.saveDistribution(mockDistributionResult, 101);
 
             // Retrieve distribution with project shares using relationship
             const distributionWithShares = await distributionRepository.findByIdWithProjectShares(savedDistribution.id);

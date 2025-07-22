@@ -1,0 +1,8 @@
+node_modules/
+dist/
+coverage/
+*.js
+*.d.ts
+migrations/
+Dockerfile*
+docker-compose*.yml 

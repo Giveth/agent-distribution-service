@@ -39,6 +39,7 @@ interface GenerateWalletRequest {
 interface DistributeFundsRequest {
   walletAddress: string;
   projects: Project[];
+  causeId: number;
 }
 
 // Add JSON parsing middleware
@@ -87,9 +88,9 @@ router.post(
   async (req: Request<{}, {}, DistributeFundsRequest>, res: Response) => {
     try {
       console.log("Distribute funds endpoint hit");
-      const { walletAddress, projects } = req.body;
+      const { walletAddress, projects, causeId } = req.body;
       
-      const result = await walletService.distributeFunds(walletAddress, projects);
+      const result = await walletService.distributeFunds(walletAddress, projects, causeId);
       res.json(result);
     } catch (error) {
       res.status(500).json({

@@ -158,7 +158,7 @@ export class WalletService {
      * @param floorFactor Floor factor for minimum distribution (default 0.25 = 25%)
      * @returns Distribution result with transaction details
      */
-    async distributeFunds(walletAddress: string, projects: Project[], floorFactor: number = 0.25): Promise<DistributionResult> {
+    async distributeFunds(walletAddress: string, projects: Project[], causeId: number, floorFactor: number = 0.25): Promise<DistributionResult> {
         try {
             if (projects.length === 0) {
                 throw new Error("No projects to distribute funds to");
@@ -208,6 +208,7 @@ export class WalletService {
             // Validate distribution parameters
             const validation = this.fundAllocationService.validateDistributionParameters(
                 projects,
+                causeId,
                 tokenAmountToDistribute,
                 floorFactor
             );
@@ -323,13 +324,13 @@ export class WalletService {
 
             // Save distribution data to database
             try {
-                const savedDistribution = await this.distributionRepository.saveDistribution(distributionResult);
+                const savedDistribution = await this.distributionRepository.saveDistribution(distributionResult, causeId);
                 console.log(`Distribution saved to database with ID: ${savedDistribution.id}`);
 
                 // Sync to GraphQL endpoint
                 if (projectsDistributionDetails.length > 0) {
                     try {
-                        const graphqlResult = await this.graphQLService.syncDistributionData(projectsDistributionDetails);
+                        const graphqlResult = await this.graphQLService.syncDistributionData(projectsDistributionDetails, causeId);
                         
                         if (graphqlResult.success) {
                             await this.distributionRepository.updateGraphQLSyncStatus(savedDistribution.id, 'completed');
@@ -357,7 +358,6 @@ export class WalletService {
             }
 
             return distributionResult;
-
         } catch (error) {
             throw new Error(`Failed to distribute funds: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }

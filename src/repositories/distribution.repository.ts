@@ -1,8 +1,8 @@
 import { Repository, DataSource } from 'typeorm';
 import { Distribution, DistributionProjectShare } from '../entities/Distribution';
+import { CoinGeckoService } from '../services/coingecko.service';
 import { DistributionResult } from '../services/wallet.service';
 import { Project } from '../services/fund-allocation.service';
-import { CoinGeckoService } from '../services/coingecko.service';
 
 export class DistributionRepository {
     private distributionRepository: Repository<Distribution>;
@@ -16,11 +16,11 @@ export class DistributionRepository {
     }
 
     /**
-     * Save a distribution record to the database
+     * Save a distribution result to the database
      * @param distributionResult The distribution result to save
      * @returns The saved distribution record
      */
-    async saveDistribution(distributionResult: DistributionResult): Promise<Distribution> {
+    async saveDistribution(distributionResult: DistributionResult, causeId: number): Promise<Distribution> {
         const distribution = new Distribution();
         distribution.walletAddress = distributionResult.walletAddress;
         distribution.totalBalance = distributionResult.totalBalance;
@@ -35,7 +35,7 @@ export class DistributionRepository {
         const savedDistribution = await this.distributionRepository.save(distribution);
 
         // Save individual project shares
-        await this.saveProjectShares(savedDistribution.id, distributionResult.projectsDistributionDetails);
+        await this.saveProjectShares(savedDistribution.id, causeId, distributionResult.projectsDistributionDetails);
 
         return savedDistribution;
     }
@@ -47,6 +47,7 @@ export class DistributionRepository {
      */
     async saveProjectShares(
         distributionId: string, 
+        causeId: number,
         projectsDistributionDetails: Array<{
             project: Project;
             amount: string;
@@ -61,7 +62,7 @@ export class DistributionRepository {
             const projectShare = new DistributionProjectShare();
             projectShare.distributionId = distributionId;
             projectShare.projectId = detail.project.projectId;
-            projectShare.causeId = detail.project.causeId;
+            projectShare.causeId = causeId;
             projectShare.projectName = detail.project.name;
             projectShare.projectWalletAddress = detail.project.walletAddress;
             projectShare.amountDistributed = detail.amount;

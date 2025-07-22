@@ -1,12 +1,10 @@
 export interface Project {
-    id: string;
     name: string;
     slug: string;
     walletAddress: string;
     score: number;
     rank?: number; // Optional rank for exponential distribution
     projectId: number;
-    causeId: number;
     usdValue?: number;
 }
 
@@ -154,12 +152,14 @@ export class FundAllocationService {
     /**
      * Validate distribution parameters
      * @param projects Array of projects
+     * @param causeId Cause ID
      * @param totalAmount Total amount to distribute
      * @param floorFactor Floor factor
      * @returns Validation result
      */
     validateDistributionParameters(
         projects: Project[],
+        causeId: number,
         totalAmount: number,
         floorFactor: number = 0.25
     ): { isValid: boolean; errors: string[] } {
