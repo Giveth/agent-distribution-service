@@ -26,5 +26,6 @@ export const developmentConfig: AppConfig = {
     privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
     refillFactor: 1.5, // 50% extra for safety
   },
+  impactGraphUrl: 'http://localhost:4000/graphql',
   environment: "development",
 };

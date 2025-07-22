@@ -199,7 +199,7 @@ describe('WalletService', () => {
       mockWalletRepository.findByAddress.resolves(null);
 
       const projects = [
-        { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x4567890123456789012345678901234567890123', score: 90 }
+        { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x4567890123456789012345678901234567890123', score: 90, projectId: 90, causeId: 1090 }
       ];
 
       try {
@@ -329,8 +329,8 @@ describe('WalletService - Distribution Integration', () => {
             // This test verifies that the WalletService properly integrates with FundAllocationService
             // The actual distribution logic is tested in FundAllocationService tests
             const projects: Project[] = [
-                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90 },
-                { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: 80 }
+                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90, projectId: 90, causeId: 1090 },
+                { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: 80, projectId: 80, causeId: 1080 }
             ];
 
             // Mock the wallet repository and other dependencies
@@ -347,26 +347,26 @@ describe('WalletService - Distribution Integration', () => {
         it('should distribute 5% of wallet balance with real-world scenario', () => {
             // Test the complete integration with real-world data
             const projects: Project[] = [
-                { id: '1', name: 'Project 1', slug: 'project-1', walletAddress: '0x001', score: 62 },
-                { id: '2', name: 'Project 2', slug: 'project-2', walletAddress: '0x002', score: 88 },
-                { id: '3', name: 'Project 3', slug: 'project-3', walletAddress: '0x003', score: 70 },
-                { id: '4', name: 'Project 4', slug: 'project-4', walletAddress: '0x004', score: 90 },
-                { id: '5', name: 'Project 5', slug: 'project-5', walletAddress: '0x005', score: 63 },
-                { id: '6', name: 'Project 6', slug: 'project-6', walletAddress: '0x006', score: 72 },
-                { id: '7', name: 'Project 7', slug: 'project-7', walletAddress: '0x007', score: 85 },
-                { id: '8', name: 'Project 8', slug: 'project-8', walletAddress: '0x008', score: 60 },
-                { id: '9', name: 'Project 9', slug: 'project-9', walletAddress: '0x009', score: 97 },
-                { id: '10', name: 'Project 10', slug: 'project-10', walletAddress: '0x010', score: 70 },
-                { id: '11', name: 'Project 11', slug: 'project-11', walletAddress: '0x011', score: 74 },
-                { id: '12', name: 'Project 12', slug: 'project-12', walletAddress: '0x012', score: 72 },
-                { id: '13', name: 'Project 13', slug: 'project-13', walletAddress: '0x013', score: 77 },
-                { id: '14', name: 'Project 14', slug: 'project-14', walletAddress: '0x014', score: 66 },
-                { id: '15', name: 'Project 15', slug: 'project-15', walletAddress: '0x015', score: 71 },
-                { id: '16', name: 'Project 16', slug: 'project-16', walletAddress: '0x016', score: 97 },
-                { id: '17', name: 'Project 17', slug: 'project-17', walletAddress: '0x017', score: 73 },
-                { id: '18', name: 'Project 18', slug: 'project-18', walletAddress: '0x018', score: 90 },
-                { id: '19', name: 'Project 19', slug: 'project-19', walletAddress: '0x019', score: 76 },
-                { id: '20', name: 'Project 20', slug: 'project-20', walletAddress: '0x020', score: 88 }
+                { id: '1', name: 'Project 1', slug: 'project-1', walletAddress: '0x001', score: 62, projectId: 62, causeId: 1062 },
+                { id: '2', name: 'Project 2', slug: 'project-2', walletAddress: '0x002', score: 88, projectId: 88, causeId: 1088 },
+                { id: '3', name: 'Project 3', slug: 'project-3', walletAddress: '0x003', score: 70, projectId: 70, causeId: 1070 },
+                { id: '4', name: 'Project 4', slug: 'project-4', walletAddress: '0x004', score: 90, projectId: 90, causeId: 1090 },
+                { id: '5', name: 'Project 5', slug: 'project-5', walletAddress: '0x005', score: 63, projectId: 63, causeId: 1063 },
+                { id: '6', name: 'Project 6', slug: 'project-6', walletAddress: '0x006', score: 72, projectId: 72, causeId: 1072 },
+                { id: '7', name: 'Project 7', slug: 'project-7', walletAddress: '0x007', score: 85, projectId: 85, causeId: 1085 },
+                { id: '8', name: 'Project 8', slug: 'project-8', walletAddress: '0x008', score: 60, projectId: 60, causeId: 1060 },
+                { id: '9', name: 'Project 9', slug: 'project-9', walletAddress: '0x009', score: 97, projectId: 97, causeId: 1097 },
+                { id: '10', name: 'Project 10', slug: 'project-10', walletAddress: '0x010', score: 70, projectId: 70, causeId: 1070 },
+                { id: '11', name: 'Project 11', slug: 'project-11', walletAddress: '0x011', score: 74, projectId: 74, causeId: 1074 },
+                { id: '12', name: 'Project 12', slug: 'project-12', walletAddress: '0x012', score: 72, projectId: 72, causeId: 1072 },
+                { id: '13', name: 'Project 13', slug: 'project-13', walletAddress: '0x013', score: 77, projectId: 77, causeId: 1077 },
+                { id: '14', name: 'Project 14', slug: 'project-14', walletAddress: '0x014', score: 66, projectId: 66, causeId: 1066 },
+                { id: '15', name: 'Project 15', slug: 'project-15', walletAddress: '0x015', score: 71, projectId: 71, causeId: 1071 },
+                { id: '16', name: 'Project 16', slug: 'project-16', walletAddress: '0x016', score: 97, projectId: 97, causeId: 1097 },
+                { id: '17', name: 'Project 17', slug: 'project-17', walletAddress: '0x017', score: 73, projectId: 73, causeId: 1073 },
+                { id: '18', name: 'Project 18', slug: 'project-18', walletAddress: '0x018', score: 90, projectId: 90, causeId: 1090 },
+                { id: '19', name: 'Project 19', slug: 'project-19', walletAddress: '0x019', score: 76, projectId: 76, causeId: 1076 },
+                { id: '20', name: 'Project 20', slug: 'project-20', walletAddress: '0x020', score: 88, projectId: 88, causeId: 1088 }
             ];
 
             const totalBalance = 5000; // GIV balance

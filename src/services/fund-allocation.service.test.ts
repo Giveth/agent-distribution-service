@@ -16,7 +16,7 @@ describe('FundAllocationService', () => {
 
         it('should calculate correct distribution for single project', () => {
             const projects: Project[] = [
-                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 85 }
+                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 85, projectId: 1, causeId: 101 }
             ];
 
             const result = fundAllocationService.calculateExponentialRankDistribution(projects, 1000);
@@ -30,9 +30,9 @@ describe('FundAllocationService', () => {
 
         it('should calculate correct distribution for multiple projects', () => {
             const projects: Project[] = [
-                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90 },
-                { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: 80 },
-                { id: '3', name: 'Project C', slug: 'project-c', walletAddress: '0x789', score: 70 }
+                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90, projectId: 90, causeId: 1090 },
+                { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: 80, projectId: 80, causeId: 1080 },
+                { id: '3', name: 'Project C', slug: 'project-c', walletAddress: '0x789', score: 70, projectId: 70, causeId: 1070 }
             ];
 
             const result = fundAllocationService.calculateExponentialRankDistribution(projects, 1000);
@@ -71,9 +71,9 @@ describe('FundAllocationService', () => {
 
         it('should apply floor factor correctly', () => {
             const projects: Project[] = [
-                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90 },
-                { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: 80 },
-                { id: '3', name: 'Project C', slug: 'project-c', walletAddress: '0x789', score: 70 }
+                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90, projectId: 90, causeId: 1090 },
+                { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: 80, projectId: 80, causeId: 1080 },
+                { id: '3', name: 'Project C', slug: 'project-c', walletAddress: '0x789', score: 70, projectId: 70, causeId: 1070 }
             ];
 
             const result = fundAllocationService.calculateExponentialRankDistribution(projects, 1000, 0.25); // 25% floor factor
@@ -97,8 +97,8 @@ describe('FundAllocationService', () => {
     describe('calculateDistribution', () => {
         it('should return calculations and summary', () => {
             const projects: Project[] = [
-                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90 },
-                { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: 80 }
+                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90, projectId: 90, causeId: 1090 },
+                { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: 80, projectId: 80, causeId: 1080 }
             ];
 
             const result = fundAllocationService.calculateDistribution(projects, 1000, 0.25);
@@ -114,7 +114,7 @@ describe('FundAllocationService', () => {
     describe('validateDistributionParameters', () => {
         it('should validate correct parameters', () => {
             const projects: Project[] = [
-                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90 }
+                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90, projectId: 90, causeId: 1090 }
             ];
 
             const result = fundAllocationService.validateDistributionParameters(projects, 1000, 0.25);
@@ -132,7 +132,7 @@ describe('FundAllocationService', () => {
 
         it('should reject negative total amount', () => {
             const projects: Project[] = [
-                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90 }
+                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90, projectId: 90, causeId: 1090 }
             ];
 
             const result = fundAllocationService.validateDistributionParameters(projects, -100, 0.25);
@@ -143,7 +143,7 @@ describe('FundAllocationService', () => {
 
         it('should reject invalid floor factor', () => {
             const projects: Project[] = [
-                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90 }
+                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90, projectId: 90, causeId: 1090 }
             ];
 
             const result = fundAllocationService.validateDistributionParameters(projects, 1000, 1.5);
@@ -154,8 +154,8 @@ describe('FundAllocationService', () => {
 
         it('should reject projects with invalid scores', () => {
             const projects: Project[] = [
-                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 150 },
-                { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: -10 }
+                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 150, projectId: 150, causeId: 10150 },
+                { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: -10, projectId: 2, causeId: 102 }
             ];
 
             const result = fundAllocationService.validateDistributionParameters(projects, 1000, 0.25);
@@ -166,8 +166,8 @@ describe('FundAllocationService', () => {
 
         it('should reject duplicate wallet addresses', () => {
             const projects: Project[] = [
-                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90 },
-                { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x123', score: 80 }
+                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90, projectId: 90, causeId: 1090 },
+                { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x123', score: 80, projectId: 80, causeId: 1080 }
             ];
 
             const result = fundAllocationService.validateDistributionParameters(projects, 1000, 0.25);
@@ -181,21 +181,21 @@ describe('FundAllocationService', () => {
         it('should return correct statistics for multiple projects', () => {
             const calculations: DistributionCalculation[] = [
                 {
-                    project: { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90 },
+                    project: { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90, projectId: 90, causeId: 1090 },
                     rank: 1,
                     invertedExponentialRank: 9,
                     finalAmount: 600,
                     percentage: 0.6
                 },
                 {
-                    project: { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: 80 },
+                    project: { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: 80, projectId: 80, causeId: 1080 },
                     rank: 2,
                     invertedExponentialRank: 4,
                     finalAmount: 300,
                     percentage: 0.3
                 },
                 {
-                    project: { id: '3', name: 'Project C', slug: 'project-c', walletAddress: '0x789', score: 70 },
+                    project: { id: '3', name: 'Project C', slug: 'project-c', walletAddress: '0x789', score: 70, projectId: 70, causeId: 1070 },
                     rank: 3,
                     invertedExponentialRank: 1,
                     finalAmount: 100,
@@ -230,12 +230,35 @@ describe('FundAllocationService', () => {
         });
     });
 
+    describe('Distribution amount validation', () => {
+        it('should ensure distribution amounts never exceed total amount', () => {
+            const projects: Project[] = [
+                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 100, projectId: 100, causeId: 10100 },
+                { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: 95, projectId: 95, causeId: 1095 },
+                { id: '3', name: 'Project C', slug: 'project-c', walletAddress: '0x789', score: 90, projectId: 90, causeId: 1090 }
+            ];
+
+            const distributionAmount = 100;
+            const result = fundAllocationService.calculateDistribution(projects, distributionAmount, 0.25);
+
+            // Verify that total distributed amount never exceeds the input amount
+            const totalDistributed = result.calculations.reduce((sum, calc) => sum + calc.finalAmount, 0);
+            expect(totalDistributed).to.be.lessThanOrEqual(distributionAmount + 0.000001);
+
+            console.log('Distribution validation test:', {
+                expectedTotal: distributionAmount,
+                actualTotal: totalDistributed,
+                difference: distributionAmount - totalDistributed
+            });
+        });
+    });
+
     describe('Formula verification', () => {
         it('should match the specified formula exactly', () => {
             const projects: Project[] = [
-                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90 },
-                { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: 80 },
-                { id: '3', name: 'Project C', slug: 'project-c', walletAddress: '0x789', score: 70 }
+                { id: '1', name: 'Project A', slug: 'project-a', walletAddress: '0x123', score: 90, projectId: 90, causeId: 1090 },
+                { id: '2', name: 'Project B', slug: 'project-b', walletAddress: '0x456', score: 80, projectId: 80, causeId: 1080 },
+                { id: '3', name: 'Project C', slug: 'project-c', walletAddress: '0x789', score: 70, projectId: 70, causeId: 1070 }
             ];
 
             const DA = 1000; // Distribution Amount
@@ -266,26 +289,26 @@ describe('FundAllocationService', () => {
         it('should distribute 5000 GIV among 20 projects with specific evaluation scores', () => {
             // Test data with 20 projects, 5000 GIV balance, and specific evaluation scores
             const projects: Project[] = [
-                { id: '1', name: 'Project 1', slug: 'project-1', walletAddress: '0x001', score: 62 },
-                { id: '2', name: 'Project 2', slug: 'project-2', walletAddress: '0x002', score: 88 },
-                { id: '3', name: 'Project 3', slug: 'project-3', walletAddress: '0x003', score: 70 },
-                { id: '4', name: 'Project 4', slug: 'project-4', walletAddress: '0x004', score: 90 },
-                { id: '5', name: 'Project 5', slug: 'project-5', walletAddress: '0x005', score: 63 },
-                { id: '6', name: 'Project 6', slug: 'project-6', walletAddress: '0x006', score: 72 },
-                { id: '7', name: 'Project 7', slug: 'project-7', walletAddress: '0x007', score: 85 },
-                { id: '8', name: 'Project 8', slug: 'project-8', walletAddress: '0x008', score: 60 },
-                { id: '9', name: 'Project 9', slug: 'project-9', walletAddress: '0x009', score: 97 },
-                { id: '10', name: 'Project 10', slug: 'project-10', walletAddress: '0x010', score: 70 },
-                { id: '11', name: 'Project 11', slug: 'project-11', walletAddress: '0x011', score: 74 },
-                { id: '12', name: 'Project 12', slug: 'project-12', walletAddress: '0x012', score: 72 },
-                { id: '13', name: 'Project 13', slug: 'project-13', walletAddress: '0x013', score: 77 },
-                { id: '14', name: 'Project 14', slug: 'project-14', walletAddress: '0x014', score: 66 },
-                { id: '15', name: 'Project 15', slug: 'project-15', walletAddress: '0x015', score: 71 },
-                { id: '16', name: 'Project 16', slug: 'project-16', walletAddress: '0x016', score: 97 },
-                { id: '17', name: 'Project 17', slug: 'project-17', walletAddress: '0x017', score: 73 },
-                { id: '18', name: 'Project 18', slug: 'project-18', walletAddress: '0x018', score: 90 },
-                { id: '19', name: 'Project 19', slug: 'project-19', walletAddress: '0x019', score: 76 },
-                { id: '20', name: 'Project 20', slug: 'project-20', walletAddress: '0x020', score: 88 }
+                { id: '1', name: 'Project 1', slug: 'project-1', walletAddress: '0x001', score: 62, projectId: 62, causeId: 1062 },
+                { id: '2', name: 'Project 2', slug: 'project-2', walletAddress: '0x002', score: 88, projectId: 88, causeId: 1088 },
+                { id: '3', name: 'Project 3', slug: 'project-3', walletAddress: '0x003', score: 70, projectId: 70, causeId: 1070 },
+                { id: '4', name: 'Project 4', slug: 'project-4', walletAddress: '0x004', score: 90, projectId: 90, causeId: 1090 },
+                { id: '5', name: 'Project 5', slug: 'project-5', walletAddress: '0x005', score: 63, projectId: 63, causeId: 1063 },
+                { id: '6', name: 'Project 6', slug: 'project-6', walletAddress: '0x006', score: 72, projectId: 72, causeId: 1072 },
+                { id: '7', name: 'Project 7', slug: 'project-7', walletAddress: '0x007', score: 85, projectId: 85, causeId: 1085 },
+                { id: '8', name: 'Project 8', slug: 'project-8', walletAddress: '0x008', score: 60, projectId: 60, causeId: 1060 },
+                { id: '9', name: 'Project 9', slug: 'project-9', walletAddress: '0x009', score: 97, projectId: 97, causeId: 1097 },
+                { id: '10', name: 'Project 10', slug: 'project-10', walletAddress: '0x010', score: 70, projectId: 70, causeId: 1070 },
+                { id: '11', name: 'Project 11', slug: 'project-11', walletAddress: '0x011', score: 74, projectId: 74, causeId: 1074 },
+                { id: '12', name: 'Project 12', slug: 'project-12', walletAddress: '0x012', score: 72, projectId: 72, causeId: 1072 },
+                { id: '13', name: 'Project 13', slug: 'project-13', walletAddress: '0x013', score: 77, projectId: 77, causeId: 1077 },
+                { id: '14', name: 'Project 14', slug: 'project-14', walletAddress: '0x014', score: 66, projectId: 66, causeId: 1066 },
+                { id: '15', name: 'Project 15', slug: 'project-15', walletAddress: '0x015', score: 71, projectId: 71, causeId: 1071 },
+                { id: '16', name: 'Project 16', slug: 'project-16', walletAddress: '0x016', score: 97, projectId: 97, causeId: 1097 },
+                { id: '17', name: 'Project 17', slug: 'project-17', walletAddress: '0x017', score: 73, projectId: 73, causeId: 1073 },
+                { id: '18', name: 'Project 18', slug: 'project-18', walletAddress: '0x018', score: 90, projectId: 90, causeId: 1090 },
+                { id: '19', name: 'Project 19', slug: 'project-19', walletAddress: '0x019', score: 76, projectId: 76, causeId: 1076 },
+                { id: '20', name: 'Project 20', slug: 'project-20', walletAddress: '0x020', score: 88, projectId: 88, causeId: 1088 }
             ];
 
             const totalBalance = 5000; // GIV balance

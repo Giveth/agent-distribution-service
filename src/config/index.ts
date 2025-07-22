@@ -40,5 +40,6 @@ export const config: AppConfig = {
     privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || baseConfig.feeRefiller.privateKey,
     refillFactor: Number(process.env.FEE_REFILL_FACTOR) || baseConfig.feeRefiller.refillFactor,
   },
+  impactGraphUrl: process.env.IMPACT_GRAPH_URL || baseConfig.impactGraphUrl,
   environment: env as 'development' | 'production',
 }; 

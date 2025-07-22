@@ -1,10 +1,13 @@
 import { ethers, HDNodeWallet } from 'ethers';
 import { WalletRepository } from '../repositories/wallet.repository';
+import { DistributionRepository } from '../repositories/distribution.repository';
 import { TransactionService } from './transaction.service';
 import { FundAllocationService, Project } from './fund-allocation.service';
 import { DonationHandlerService, DonationRecipient } from './donation-handler.service';
+import { ImpactGraphService } from './impact-graph.service';
 import { config } from '../config';
 import { erc20Abi } from 'viem';
+import { AppDataSource } from '../data-source';
 
 export interface WalletInfo {
     address: string;    
@@ -35,9 +38,11 @@ export interface DistributionResult {
 export class WalletService {
     private provider: ethers.JsonRpcProvider;
     private walletRepository: WalletRepository;
+    private distributionRepository: DistributionRepository;
     private transactionService: TransactionService;
     private fundAllocationService: FundAllocationService;
     private donationHandlerService: DonationHandlerService;
+    private graphQLService: ImpactGraphService;
     private baseHDPath: string = "m/44'/60'/0'/0/";
     private seedPhrase: string;
 
@@ -48,9 +53,11 @@ export class WalletService {
 
         this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
         this.walletRepository = new WalletRepository();
+        this.distributionRepository = new DistributionRepository(AppDataSource);
         this.transactionService = new TransactionService();
         this.fundAllocationService = new FundAllocationService();
         this.donationHandlerService = new DonationHandlerService();
+        this.graphQLService = new ImpactGraphService();
 
         this.seedPhrase = config.blockchain.seedPhrase;
     }
@@ -112,7 +119,7 @@ export class WalletService {
 
     /**
      * Calculate distribution amount based on balance
-     * @param balance The wallet balance in GIV
+     * @param balance The wallet balance in distribution tokens
      * @returns Object with amount to distribute and strategy used
      */
     private calculateDistributionAmount(balance: number): { amount: number; strategy: string } {
@@ -124,7 +131,7 @@ export class WalletService {
         }
 
         if (balance <= 1000) {
-            // If balance <= 1000 GIV, distribute 100% of remaining funds
+            // If balance <= 1000 tokens, distribute 100% of remaining funds
             return {
                 amount: balance,
                 strategy: '100% distribution (low balance)'
@@ -143,8 +150,8 @@ export class WalletService {
      * 
      * Distribution logic:
      * - If balance is 0: Skip distribution entirely
-     * - If balance <= 1000 GIV: Distribute 100% of remaining funds (for low-value pools and deactivated causes)
-     * - If balance > 1000 GIV: Distribute 5% of balance (standard distribution)
+     * - If balance <= 1000 tokens: Distribute 100% of remaining funds (for low-value pools and deactivated causes)
+     * - If balance > 1000 tokens: Distribute 5% of balance (standard distribution)
      * 
      * @param walletAddress The wallet address to distribute from
      * @param projects The projects to distribute funds to
@@ -163,7 +170,7 @@ export class WalletService {
                 throw new Error(`Wallet ${walletAddress} not found in database`);
             }
 
-            // Get Giv token balance
+            // Get distribution token balance
             const distributionTokenAddress = config.blockchain.tokenAddress;
             const distributionTokenContract = new ethers.Contract(distributionTokenAddress, erc20Abi, this.provider);
             const balanceWei = await distributionTokenContract.balanceOf(wallet.address);
@@ -196,7 +203,7 @@ export class WalletService {
                 };
             }
 
-            console.log(`Distribution strategy: ${distributionStrategy} - Amount to distribute: ${tokenAmountToDistribute} GIV`);
+            console.log(`Distribution strategy: ${distributionStrategy} - Amount to distribute: ${tokenAmountToDistribute} tokens`);
 
             // Validate distribution parameters
             const validation = this.fundAllocationService.validateDistributionParameters(
@@ -210,13 +217,13 @@ export class WalletService {
             }
 
             // Calculate distribution amounts using exponential rank-based system
-            const distributionResult = this.fundAllocationService.calculateDistribution(
+            const fundAllocationResult = this.fundAllocationService.calculateDistribution(
                 projects,
                 tokenAmountToDistribute,
                 floorFactor
             );
 
-            const distributionCalculations = distributionResult.calculations;
+            const distributionCalculations = fundAllocationResult.calculations;
 
             console.log("Distribution calculations:", distributionCalculations.map((calc: any) => ({
                 project: calc.project.name,
@@ -288,7 +295,7 @@ export class WalletService {
                         });
 
                         successCount = donationResult.recipientCount;
-                        console.log(`Successfully distributed ${donationResult.totalAmount} GIV to ${donationResult.recipientCount} projects via donation handler contract`);
+                        console.log(`Successfully distributed ${donationResult.totalAmount} tokens to ${donationResult.recipientCount} projects via donation handler contract`);
                     } else {
                         throw new Error(`Batch donation failed: ${donationResult.error}`);
                     }
@@ -300,7 +307,7 @@ export class WalletService {
 
             const totalDistributed = distributionCalculations.reduce((sum: number, calc: any) => sum + calc.finalAmount, 0);
 
-            return {
+            const distributionResult = {
                 walletAddress: wallet.address,
                 totalBalance: balance,
                 distributedAmount: totalDistributed.toString(),
@@ -313,6 +320,43 @@ export class WalletService {
                 },
                 projectsDistributionDetails
             };
+
+            // Save distribution data to database
+            try {
+                const savedDistribution = await this.distributionRepository.saveDistribution(distributionResult);
+                console.log(`Distribution saved to database with ID: ${savedDistribution.id}`);
+
+                // Sync to GraphQL endpoint
+                if (projectsDistributionDetails.length > 0) {
+                    try {
+                        const graphqlResult = await this.graphQLService.syncDistributionData(projectsDistributionDetails);
+                        
+                        if (graphqlResult.success) {
+                            await this.distributionRepository.updateGraphQLSyncStatus(savedDistribution.id, 'completed');
+                            await this.distributionRepository.updateProjectSharesGraphQLSyncStatus(savedDistribution.id, 'completed');
+                            console.log(`Distribution data synced to GraphQL successfully. Updated ${graphqlResult.data?.length || 0} records.`);
+                        } else {
+                            await this.distributionRepository.updateGraphQLSyncStatus(savedDistribution.id, 'failed', graphqlResult.error);
+                            await this.distributionRepository.updateProjectSharesGraphQLSyncStatus(savedDistribution.id, 'failed', graphqlResult.error);
+                            console.error(`Failed to sync distribution data to GraphQL: ${graphqlResult.error}`);
+                        }
+                    } catch (error) {
+                        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                        await this.distributionRepository.updateGraphQLSyncStatus(savedDistribution.id, 'failed', errorMessage);
+                        await this.distributionRepository.updateProjectSharesGraphQLSyncStatus(savedDistribution.id, 'failed', errorMessage);
+                        console.error(`Error syncing to GraphQL: ${errorMessage}`);
+                    }
+                } else {
+                    await this.distributionRepository.updateGraphQLSyncStatus(savedDistribution.id, 'completed');
+                    await this.distributionRepository.updateProjectSharesGraphQLSyncStatus(savedDistribution.id, 'completed');
+                    console.log('No distribution data to sync to GraphQL');
+                }
+            } catch (error) {
+                console.error('Failed to save distribution data:', error);
+                // Continue with the distribution result even if saving fails
+            }
+
+            return distributionResult;
 
         } catch (error) {
             throw new Error(`Failed to distribute funds: ${error instanceof Error ? error.message : 'Unknown error'}`);

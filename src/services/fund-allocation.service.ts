@@ -5,6 +5,9 @@ export interface Project {
     walletAddress: string;
     score: number;
     rank?: number; // Optional rank for exponential distribution
+    projectId: number;
+    causeId: number;
+    usdValue?: number;
 }
 
 export interface DistributionCalculation {
@@ -93,6 +96,19 @@ export class FundAllocationService {
                 percentage
             };
         });
+
+        // Check if total calculated amount exceeds distribution amount
+        const totalCalculatedAmount = distributionCalculations.reduce((sum, calc) => sum + calc.finalAmount, 0);
+        
+        if (totalCalculatedAmount > distributionAmount) {
+            // Reduce all amounts proportionally to fit within the distribution amount
+            const reductionFactor = distributionAmount / totalCalculatedAmount;
+            
+            distributionCalculations.forEach(calc => {
+                calc.finalAmount = calc.finalAmount * reductionFactor;
+                calc.percentage = calc.finalAmount / distributionAmount;
+            });
+        }
 
         return distributionCalculations;
     }

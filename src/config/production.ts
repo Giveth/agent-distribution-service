@@ -26,5 +26,6 @@ export const productionConfig: AppConfig = {
     privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || "",
     refillFactor: 1.5, // 50% extra for safety
   },
+  impactGraphUrl: 'https://mainnet.serve.giveth.io/graphql',
   environment: 'production',
 }; 

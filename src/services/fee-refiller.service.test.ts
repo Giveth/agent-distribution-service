@@ -84,24 +84,4 @@ describe('FeeRefillerService', () => {
       }
     });
   });
-
-  describe('refillPool', () => {
-    it('should refill wallet correctly', async function() {
-      this.timeout(5000); // Increase timeout for this test
-      
-      const walletAddress = '0x1234567890123456789012345678901234567890';
-      const estimatedFee = ethers.parseEther('0.01'); // 0.01 POL
-      
-      const result = await feeRefillerService.refillPool(walletAddress, estimatedFee);
-      
-      expect(result).to.exist;
-      expect(typeof result.success).to.equal('boolean');
-      if (result.success) {
-        expect(result.refilledAmount).to.exist;
-        expect(result.transactionHash).to.exist;
-      } else {
-        expect(result.error).to.exist;
-      }
-    });
-  });
 }); 

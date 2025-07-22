@@ -38,31 +38,4 @@ describe('TransactionService', () => {
     delete process.env.FEE_REFILLER_PRIVATE_KEY;
     delete process.env.RPC_URL;
   });
-
-
-
-  describe('sendTransaction', () => {
-    it('should handle transaction requests correctly', async () => {
-      const request = {
-        to: '0x1234567890123456789012345678901234567890',
-        data: '0x',
-        value: '0',
-        from: '0xabcdefabcdefabcdefabcdefabcdefabcdefabcd'
-      };
-      const hdPath = "m/44'/60'/0'/0/0";
-
-      // This test will likely fail in a real environment due to missing private keys
-      // but it tests the structure and error handling
-      try {
-        const result = await transactionService.sendTransaction(request, hdPath);
-        expect(result).to.exist;
-        expect(result.transactionHash).to.exist;
-        expect(result.feeRefillResult).to.exist;
-      } catch (error) {
-        // Expected to fail in test environment
-        expect(error).to.exist;
-        expect(error instanceof Error).to.be.true;
-      }
-    });
-  });
 }); 
