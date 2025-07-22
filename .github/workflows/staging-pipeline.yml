@@ -29,6 +29,21 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+          PGDATA: /var/lib/postgresql/data/pgdata
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
@@ -42,8 +57,24 @@ jobs:
           cache: 'npm'
       - name: Install dependencies
         run: npm ci
+      - name: Run migrations
+        run: npm run migration:run
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: test_db
       - name: Run tests
         run: npm test
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: test_db
 
   publish:
     runs-on: ubuntu-latest

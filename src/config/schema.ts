@@ -33,5 +33,5 @@ export interface AppConfig {
   blockchain: BlockchainConfig;
   feeRefiller: FeeRefillerConfig;
   impactGraphUrl: string;
-  environment: 'development' | 'staging' | 'production';
+  environment: 'development' | 'staging' | 'production' | 'test';
 } 

@@ -18,7 +18,7 @@ export const AppDataSource = new DataSource({
   migrationsRun: config.environment === "development",
   subscribers: [],
   ssl:
-    config.environment === "development"
+    config.environment === "development" || config.environment === "test"
       ? false
       : {
           rejectUnauthorized: false,

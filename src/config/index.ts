@@ -1,6 +1,7 @@
 import { developmentConfig } from './development';
 import { productionConfig } from './production';
 import { stagingConfig } from './staging';
+import { testConfig } from './test';
 import { AppConfig } from './schema';
 import dotenv from 'dotenv';
 
@@ -11,7 +12,16 @@ dotenv.config();
 const env = process.env.NODE_ENV || 'development';
 
 // Select the base configuration based on environment
-const baseConfig = env === 'production' ? productionConfig : env === 'staging' ? stagingConfig : developmentConfig;
+let baseConfig;
+if (env === 'production') {
+  baseConfig = productionConfig;
+} else if (env === 'staging') {
+  baseConfig = stagingConfig;
+} else if (env === 'test') {
+  baseConfig = testConfig;
+} else {
+  baseConfig = developmentConfig;
+}
 
 // Merge environment variables with the base configuration
 export const config: AppConfig = {
@@ -41,5 +51,5 @@ export const config: AppConfig = {
     refillFactor: Number(process.env.FEE_REFILL_FACTOR) || baseConfig.feeRefiller.refillFactor,
   },
   impactGraphUrl: process.env.IMPACT_GRAPH_URL || baseConfig.impactGraphUrl,
-  environment: env as 'development' | 'production',
+  environment: env as 'development' | 'production' | 'test',
 }; 
