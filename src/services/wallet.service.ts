@@ -1,10 +1,10 @@
 import { ethers, HDNodeWallet } from 'ethers';
 import { WalletRepository } from '../repositories/wallet.repository';
 import { DistributionRepository } from '../repositories/distribution.repository';
-import { TransactionService } from './transaction.service';
 import { FundAllocationService, Project } from './fund-allocation.service';
 import { DonationHandlerService, DonationRecipient } from './donation-handler.service';
 import { ImpactGraphService } from './impact-graph.service';
+import { DiscordService, DistributionNotification } from './discord.service';
 import { config } from '../config';
 import { erc20Abi } from 'viem';
 import { AppDataSource } from '../data-source';
@@ -39,10 +39,10 @@ export class WalletService {
     private provider: ethers.JsonRpcProvider;
     private walletRepository: WalletRepository;
     private distributionRepository: DistributionRepository;
-    private transactionService: TransactionService;
     private fundAllocationService: FundAllocationService;
     private donationHandlerService: DonationHandlerService;
     private graphQLService: ImpactGraphService;
+    private discordService: DiscordService | null = null;
     private baseHDPath: string = "m/44'/60'/0'/0/";
     private seedPhrase: string;
 
@@ -54,7 +54,6 @@ export class WalletService {
         this.provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
         this.walletRepository = new WalletRepository();
         this.distributionRepository = new DistributionRepository(AppDataSource);
-        this.transactionService = new TransactionService();
         this.fundAllocationService = new FundAllocationService();
         this.donationHandlerService = new DonationHandlerService();
         this.graphQLService = new ImpactGraphService();
@@ -355,6 +354,35 @@ export class WalletService {
             } catch (error) {
                 console.error('Failed to save distribution data:', error);
                 // Continue with the distribution result even if saving fails
+            }
+
+            // Send Discord notification for successful distributions
+            if (distributionResult.summary.totalTransactions > 0) {
+                try {
+                    // Initialize Discord service if not already initialized
+                    if (!this.discordService) {
+                        this.discordService = new DiscordService();
+                        await this.discordService.initialize();
+                    }
+                    
+                    const notification: DistributionNotification = {
+                        walletAddress: distributionResult.walletAddress,
+                        totalBalance: distributionResult.totalBalance,
+                        distributedAmount: distributionResult.distributedAmount,
+                        totalRecipients: distributionResult.summary.totalRecipients,
+                        totalTransactions: distributionResult.summary.totalTransactions,
+                        successCount: distributionResult.summary.successCount,
+                        failureCount: distributionResult.summary.failureCount,
+                        projectsDistributionDetails: distributionResult.projectsDistributionDetails,
+                        transactions: distributionResult.transactions,
+                        causeId,
+                    };
+                    
+                    await this.discordService.sendDistributionNotification(notification);
+                } catch (error) {
+                    console.error('Failed to send Discord notification:', error);
+                    // Don't fail the distribution if Discord notification fails
+                }
             }
 
             return distributionResult;

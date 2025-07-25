@@ -50,6 +50,15 @@ export const config: AppConfig = {
     privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || baseConfig.feeRefiller.privateKey,
     refillFactor: Number(process.env.FEE_REFILL_FACTOR) || baseConfig.feeRefiller.refillFactor,
   },
+  discord: {
+    botToken: process.env.DISCORD_BOT_TOKEN || baseConfig.discord.botToken,
+    channelId: process.env.DISCORD_CHANNEL_ID || baseConfig.discord.channelId,
+    guildId: process.env.DISCORD_GUILD_ID || baseConfig.discord.guildId,
+    alertChannelId: process.env.DISCORD_ALERT_CHANNEL_ID || baseConfig.discord.alertChannelId,
+    feeThreshold: process.env.DISCORD_FEE_THRESHOLD || baseConfig.discord.feeThreshold,
+    alertUsers: process.env.DISCORD_ALERT_USERS ? process.env.DISCORD_ALERT_USERS.split(',') : baseConfig.discord.alertUsers,
+    balanceCheckCron: process.env.DISCORD_BALANCE_CHECK_CRON || baseConfig.discord.balanceCheckCron,
+  },
   impactGraphUrl: process.env.IMPACT_GRAPH_URL || baseConfig.impactGraphUrl,
   environment: env as 'development' | 'production' | 'test',
 }; 

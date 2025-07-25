@@ -1,5 +1,7 @@
 import express, { Request, Response, Router } from "express";
 import { WalletService } from "./services/wallet.service";
+import { DiscordService } from "./services/discord.service";
+import { CheckBalanceService } from "./services/cronjobs/check-balance.service";
 import { config } from "./config";
 import { initializeDataSource } from "./data-source";
 import { ipWhitelistMiddleware } from "./middleware/ip-whitelist";
@@ -9,12 +11,36 @@ import { debugConfiguration, validateAddresses } from "./utils/config-validation
 const app = express();
 const router = Router();
 const walletService = new WalletService();
+const discordService = new DiscordService();
+const checkBalanceService = new CheckBalanceService();
 
 // Initialize database connection and wallet service
 async function initialize() {
   try {
     await initializeDataSource();
     console.log("Database connection initialized");
+    
+    // Initialize Discord service if configured
+    if (config.discord.botToken && config.discord.channelId && config.discord.guildId) {
+      try {
+        await discordService.initialize();
+        console.log("Discord service initialized successfully");
+      } catch (error) {
+        console.error("Failed to initialize Discord service:", error);
+        console.log("Continuing without Discord notifications...");
+      }
+    } else {
+      console.log("Discord configuration not found, skipping Discord service initialization");
+    }
+    
+    // Initialize balance check service
+    try {
+      await checkBalanceService.initialize();
+      console.log("Balance check service initialized successfully");
+    } catch (error) {
+      console.error("Failed to initialize balance check service:", error);
+      console.log("Continuing without scheduled balance checks...");
+    }
     
     // Debug configuration on startup
     console.log("\n=== Startup Configuration Check ===");
@@ -99,6 +125,32 @@ router.post(
     }
   }
 );
+
+// Check fee provider status
+router.get("/fee-status", async (req: Request, res: Response) => {
+  try {
+    console.log("Fee status endpoint hit");
+    const feeStatus = await discordService.getFeeProviderStatus();
+    res.json(feeStatus);
+  } catch (error) {
+    res.status(500).json({
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
+
+// Check fee provider balance and send alert if needed
+router.post("/check-fee-balance", async (req: Request, res: Response) => {
+  try {
+    console.log("Check fee balance endpoint hit");
+    await discordService.checkFeeProviderBalance();
+    res.json({ message: "Fee provider balance check completed" });
+  } catch (error) {
+    res.status(500).json({
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+});
 
 // Basic health check endpoint
 app.get("/api/health", (req: Request, res: Response) => {

@@ -27,11 +27,22 @@ export interface FeeRefillerConfig {
   refillFactor: number; // Multiplier for fee amount (e.g., 1.5 = 50% extra)
 }
 
+export interface DiscordConfig {
+  botToken: string;
+  channelId: string;
+  guildId: string;
+  alertChannelId?: string; // Optional channel for alerts
+  feeThreshold: string; // Minimum balance threshold for fee provider wallet
+  alertUsers: string[]; // Array of user IDs to tag in alerts
+  balanceCheckCron: string; // Cron schedule for balance checks (default: '0 * * * *' - every hour)
+}
+
 export interface AppConfig {
   server: ServerConfig;
   database: DatabaseConfig;
   blockchain: BlockchainConfig;
   feeRefiller: FeeRefillerConfig;
+  discord: DiscordConfig;
   impactGraphUrl: string;
   environment: 'development' | 'staging' | 'production' | 'test';
 } 
