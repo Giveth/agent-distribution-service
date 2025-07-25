@@ -494,8 +494,6 @@ export class DiscordService {
         { name: 'Fee Provider Address', value: `\`${notification.walletAddress}\``, inline: false },
         { name: 'Current Balance', value: `${notification.currentBalance} POL`, inline: true },
         { name: 'Threshold', value: `${notification.threshold} POL`, inline: true },
-        { name: 'Refiller Address', value: `\`${notification.refillerAddress}\``, inline: false },
-        { name: 'Refiller Balance', value: `${notification.refillerBalance} POL`, inline: true }
       );
 
     return embed;
