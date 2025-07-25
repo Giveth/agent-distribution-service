@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
 import { config } from '../config';
+import { DiscordService } from './discord.service';
 
 export interface FeeRefillResult {
   success: boolean;
@@ -19,6 +20,7 @@ export class FeeRefillerService {
   private provider: ethers.JsonRpcProvider;
   private refillerWallet: ethers.Wallet;
   private refillFactor: number;
+  private discordService: DiscordService | null = null;
 
   constructor() {
     this.provider = new ethers.JsonRpcProvider(config.blockchain.rpcUrl);
@@ -245,5 +247,28 @@ export class FeeRefillerService {
    */
   getRefillerAddress(): string {
     return this.refillerWallet.address;
+  }
+
+  /**
+   * Check refiller wallet balance and send Discord alert if below threshold
+   */
+  async checkAndAlertBalance(): Promise<void> {
+    try {
+      const balance = await this.provider.getBalance(this.refillerWallet.address);
+      const balanceInEth = parseFloat(ethers.formatEther(balance));
+      const threshold = parseFloat(config.discord.feeThreshold);
+
+      if (balanceInEth < threshold) {
+        // Initialize Discord service if not already initialized
+        if (!this.discordService) {
+          this.discordService = new DiscordService();
+          await this.discordService.initialize();
+        }
+        
+        await this.discordService.checkFeeProviderBalance();
+      }
+    } catch (error) {
+      console.error('Failed to check refiller wallet balance:', error);
+    }
   }
 } 

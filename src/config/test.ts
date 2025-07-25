@@ -26,6 +26,15 @@ export const testConfig: AppConfig = {
     privateKey: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
     refillFactor: 1.5,
   },
+  discord: {
+    botToken: "test-token",
+    channelId: "test-channel",
+    guildId: "test-guild",
+    alertChannelId: "test-alert-channel",
+    feeThreshold: "0.1",
+    alertUsers: ["test-user-1", "test-user-2"],
+    balanceCheckCron: "0 * * * *", // Every hour for tests
+  },
   impactGraphUrl: 'http://localhost:4000/graphql',
   environment: "test",
 }; 

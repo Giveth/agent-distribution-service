@@ -26,6 +26,15 @@ export const stagingConfig: AppConfig = {
     privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || "",
     refillFactor: 1.5, // 50% extra for safety
   },
+  discord: {
+    botToken: process.env.DISCORD_BOT_TOKEN || "",
+    channelId: process.env.DISCORD_CHANNEL_ID || "",
+    guildId: process.env.DISCORD_GUILD_ID || "",
+    alertChannelId: process.env.DISCORD_ALERT_CHANNEL_ID,
+    feeThreshold: process.env.DISCORD_FEE_THRESHOLD || "1", // 1 POL minimum for staging
+    alertUsers: process.env.DISCORD_ALERT_USERS ? process.env.DISCORD_ALERT_USERS.split(',') : [],
+    balanceCheckCron: process.env.DISCORD_BALANCE_CHECK_CRON || "0 * * * *", // Every hour by default
+  },
   impactGraphUrl: 'https://impact-graph.serve.giveth.io/graphql',
   environment: "staging",
 };

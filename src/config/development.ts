@@ -26,6 +26,15 @@ export const developmentConfig: AppConfig = {
     privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",
     refillFactor: 1.5, // 50% extra for safety
   },
+  discord: {
+    botToken: process.env.DISCORD_BOT_TOKEN || "",
+    channelId: process.env.DISCORD_CHANNEL_ID || "",
+    guildId: process.env.DISCORD_GUILD_ID || "",
+    alertChannelId: process.env.DISCORD_ALERT_CHANNEL_ID,
+    feeThreshold: process.env.DISCORD_FEE_THRESHOLD || "0.1", // 0.1 POL minimum
+    alertUsers: process.env.DISCORD_ALERT_USERS ? process.env.DISCORD_ALERT_USERS.split(',') : [],
+    balanceCheckCron: process.env.DISCORD_BALANCE_CHECK_CRON || "0 * * * *", // Every hour by default
+  },
   impactGraphUrl: 'http://localhost:4000/graphql',
   environment: "development",
 };
