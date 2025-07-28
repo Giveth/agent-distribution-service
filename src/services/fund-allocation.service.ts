@@ -40,6 +40,15 @@ export interface DistributionResult {
 
 export class FundAllocationService {
     /**
+     * Round a number to 4 decimal places to avoid floating-point precision issues
+     * @param value The number to round
+     * @returns The rounded number
+     */
+    private roundToFourDecimals(value: number): number {
+        return Math.round(value * 10000) / 10000;
+    }
+
+    /**
      * Calculate exponential rank-based distribution amounts
      * @param projects Array of projects with scores
      * @param distributionAmount Total amount to distribute
@@ -108,6 +117,22 @@ export class FundAllocationService {
             });
         }
 
+        // Round all amounts to 4 decimal places to avoid floating-point precision issues
+        distributionCalculations.forEach(calc => {
+            calc.finalAmount = this.roundToFourDecimals(calc.finalAmount);
+            calc.percentage = this.roundToFourDecimals(calc.percentage);
+        });
+
+        // Validate that the total doesn't exceed the distribution amount after rounding
+        const totalAfterRounding = distributionCalculations.reduce((sum, calc) => sum + calc.finalAmount, 0);
+
+        if (totalAfterRounding > distributionAmount) {
+            throw new Error(
+                `Distribution calculation error: Total calculated amount (${totalAfterRounding}) exceeds distribution amount (${distributionAmount}). ` +
+                `Difference: ${(totalAfterRounding - distributionAmount).toFixed(4)}`
+            );
+        }
+
         return distributionCalculations;
     }
 
@@ -117,6 +142,7 @@ export class FundAllocationService {
      * @param totalAmount Total amount to distribute
      * @param floorFactor Floor factor for minimum distribution (default 0.25 = 25%)
      * @returns Distribution calculations with detailed breakdown
+     * @throws Error if the calculated distribution exceeds the total amount
      */
     calculateDistribution(
         projects: Project[],
@@ -131,22 +157,30 @@ export class FundAllocationService {
             totalInvertedExponentialRank: number;
         };
     } {
-        const calculations = this.calculateExponentialRankDistribution(projects, totalAmount, floorFactor);
-        
-        const totalInvertedExponentialRank = calculations.reduce(
-            (sum, calc) => sum + calc.invertedExponentialRank, 
-            0
-        );
+        try {
+            const calculations = this.calculateExponentialRankDistribution(projects, totalAmount, floorFactor);
+            
+            const totalInvertedExponentialRank = calculations.reduce(
+                (sum, calc) => sum + calc.invertedExponentialRank, 
+                0
+            );
 
-        return {
-            calculations,
-            summary: {
-                totalProjects: projects.length,
-                totalAmount,
-                floorFactor,
-                totalInvertedExponentialRank
+            return {
+                calculations,
+                summary: {
+                    totalProjects: projects.length,
+                    totalAmount,
+                    floorFactor,
+                    totalInvertedExponentialRank
+                }
+            };
+        } catch (error) {
+            // Re-throw the error with additional context
+            if (error instanceof Error) {
+                throw new Error(`Distribution calculation failed: ${error.message}`);
             }
-        };
+            throw error;
+        }
     }
 
     /**
