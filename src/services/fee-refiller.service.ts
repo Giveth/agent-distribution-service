@@ -20,12 +20,14 @@ export class FeeRefillerService {
   private provider: ethers.JsonRpcProvider;
   private refillerWallet: ethers.Wallet;
   private refillFactor: number;
+  private minimumBalance: bigint;
   private discordService: DiscordService | null = null;
 
   constructor() {
     this.provider = new ethers.JsonRpcProvider(config.blockchain.rpcUrl);
     this.refillerWallet = new ethers.Wallet(config.feeRefiller.privateKey, this.provider);
     this.refillFactor = config.feeRefiller.refillFactor;
+    this.minimumBalance = ethers.parseEther(config.feeRefiller.minimumBalance);
   }
 
   /**
@@ -128,7 +130,13 @@ export class FeeRefillerService {
   async hasSufficientBalance(walletAddress: string, requiredFee: bigint): Promise<boolean> {
     try {
       const balance = await this.provider.getBalance(walletAddress);
-      return balance >= requiredFee;
+      
+      // Check if balance is sufficient for both the required fee and minimum balance
+      const requiredAmount = requiredFee > this.minimumBalance ? requiredFee : this.minimumBalance;
+      
+      console.log(`Checking balance for ${walletAddress}: Current: ${ethers.formatEther(balance)} POL, Required: ${ethers.formatEther(requiredAmount)} POL (Fee: ${ethers.formatEther(requiredFee)} POL, Min: ${ethers.formatEther(this.minimumBalance)} POL)`);
+      
+      return balance >= requiredAmount;
     } catch (error) {
       console.error('Error checking wallet balance:', error);
       return false;
@@ -229,7 +237,8 @@ export class FeeRefillerService {
         };
       }
 
-      console.log(`Wallet ${walletAddress} needs refilling. Required: ${ethers.formatEther(estimatedFee)} POL`);
+      const requiredAmount = estimatedFee > this.minimumBalance ? estimatedFee : this.minimumBalance;
+      console.log(`Wallet ${walletAddress} needs refilling. Required: ${ethers.formatEther(requiredAmount)} POL (Fee: ${ethers.formatEther(estimatedFee)} POL, Min: ${ethers.formatEther(this.minimumBalance)} POL)`);
       
       // Refill the wallet
       return await this.refillPool(walletAddress, estimatedFee);

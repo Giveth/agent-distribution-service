@@ -25,6 +25,7 @@ export const productionConfig: AppConfig = {
   feeRefiller: {
     privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || "",
     refillFactor: 1.5, // 50% extra for safety
+    minimumBalance: process.env.FEE_REFILLER_MINIMUM_BALANCE || "0.05", // 0.05 POL minimum balance for production
   },
   discord: {
     botToken: process.env.DISCORD_BOT_TOKEN || "",

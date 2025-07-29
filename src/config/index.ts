@@ -49,6 +49,7 @@ export const config: AppConfig = {
   feeRefiller: {
     privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || baseConfig.feeRefiller.privateKey,
     refillFactor: Number(process.env.FEE_REFILL_FACTOR) || baseConfig.feeRefiller.refillFactor,
+    minimumBalance: process.env.FEE_REFILLER_MINIMUM_BALANCE || baseConfig.feeRefiller.minimumBalance,
   },
   discord: {
     botToken: process.env.DISCORD_BOT_TOKEN || baseConfig.discord.botToken,

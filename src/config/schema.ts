@@ -25,6 +25,7 @@ export interface BlockchainConfig {
 export interface FeeRefillerConfig {
   privateKey: string;
   refillFactor: number; // Multiplier for fee amount (e.g., 1.5 = 50% extra)
+  minimumBalance: string; // Minimum balance threshold in POL (e.g., "0.01")
 }
 
 export interface DiscordConfig {
