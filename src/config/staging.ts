@@ -32,7 +32,7 @@ export const stagingConfig: AppConfig = {
     channelId: process.env.DISCORD_CHANNEL_ID || "",
     guildId: process.env.DISCORD_GUILD_ID || "",
     alertChannelId: process.env.DISCORD_ALERT_CHANNEL_ID,
-    feeThreshold: process.env.DISCORD_FEE_THRESHOLD || "1", // 1 POL minimum for staging
+    feeThreshold: process.env.DISCORD_FEE_THRESHOLD || "10", // 10 POL minimum for staging
     alertUsers: process.env.DISCORD_ALERT_USERS ? process.env.DISCORD_ALERT_USERS.split(',') : [],
     balanceCheckCron: process.env.DISCORD_BALANCE_CHECK_CRON || "0 * * * *", // Every hour by default
   },
