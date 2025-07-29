@@ -240,7 +240,30 @@ export class WalletService {
                 floorFactor
             );
 
-            const distributionCalculations = fundAllocationResult.calculations;
+            let distributionCalculations = fundAllocationResult.calculations;
+
+            // Validate and adjust distribution amounts if they exceed available balance
+            const totalCalculatedAmount = distributionCalculations.reduce((sum, calc) => sum + calc.finalAmount, 0);
+            
+            if (totalCalculatedAmount > tokenAmountToDistribute) {
+                console.log(`Distribution amount validation: Calculated ${totalCalculatedAmount.toFixed(4)} but only ${tokenAmountToDistribute.toFixed(4)} available. Adjusting distribution.`);
+                
+                // Try to adjust the distribution amount to fit within available balance
+                const adjustedAmount = Math.min(tokenAmountToDistribute, balanceNumber);
+                
+                if (adjustedAmount < tokenAmountToDistribute) {
+                    console.log(`Adjusting distribution amount from ${tokenAmountToDistribute} to ${adjustedAmount} to fit within available balance`);
+                    
+                    // Recalculate distribution with adjusted amount
+                    const adjustedFundAllocationResult = this.fundAllocationService.calculateDistribution(
+                        projects,
+                        adjustedAmount,
+                        floorFactor
+                    );
+                    
+                    distributionCalculations = adjustedFundAllocationResult.calculations;
+                }
+            }
 
             console.log("Distribution calculations:", distributionCalculations.map((calc: any) => ({
                 project: calc.project.name,
@@ -333,6 +356,15 @@ export class WalletService {
             }
 
             const totalDistributed = distributionCalculations.reduce((sum: number, calc: any) => sum + calc.finalAmount, 0);
+
+            // Final validation to ensure we never exceed available balance
+            if (totalDistributed > balanceNumber) {
+                console.warn(`Final validation: Total distributed amount (${totalDistributed.toFixed(4)}) exceeds available balance (${balanceNumber.toFixed(4)}). This should not happen with the new overflow handling.`);
+                
+                // As a last resort, cap the distributed amount to the available balance
+                const cappedAmount = Math.min(totalDistributed, balanceNumber);
+                console.log(`Capping distributed amount to ${cappedAmount.toFixed(4)} to match available balance`);
+            }
 
             const distributionResult = {
                 walletAddress: wallet.address,

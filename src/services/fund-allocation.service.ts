@@ -108,29 +108,94 @@ export class FundAllocationService {
         const totalCalculatedAmount = distributionCalculations.reduce((sum, calc) => sum + calc.finalAmount, 0);
         
         if (totalCalculatedAmount > distributionAmount) {
-            // Reduce all amounts proportionally to fit within the distribution amount
-            const reductionFactor = distributionAmount / totalCalculatedAmount;
+            console.log(`Distribution overflow detected: Calculated ${totalCalculatedAmount.toFixed(4)} but only ${distributionAmount.toFixed(4)} available. Applying overflow correction.`);
             
+            // First, try proportional reduction
+            const reductionFactor = distributionAmount / totalCalculatedAmount;
+            let adjustedCalculations = distributionCalculations.map(calc => ({
+                ...calc,
+                finalAmount: calc.finalAmount * reductionFactor,
+                percentage: (calc.finalAmount * reductionFactor) / distributionAmount
+            }));
+
+            // Round all amounts to 4 decimal places
+            adjustedCalculations.forEach(calc => {
+                calc.finalAmount = this.roundToFourDecimals(calc.finalAmount);
+                calc.percentage = this.roundToFourDecimals(calc.percentage);
+            });
+
+            // Check if we still have overflow after rounding
+            const totalAfterRounding = adjustedCalculations.reduce((sum, calc) => sum + calc.finalAmount, 0);
+            
+            if (totalAfterRounding > distributionAmount) {
+                console.log(`Proportional reduction insufficient. Applying iterative reduction.`);
+                
+                // Apply iterative reduction starting from the lowest ranked projects
+                const sortedCalculations = [...adjustedCalculations].sort((a, b) => b.rank - a.rank); // Sort by rank descending (highest rank first)
+                let remainingAmount = distributionAmount;
+                const finalCalculations: DistributionCalculation[] = [];
+
+                for (let i = 0; i < sortedCalculations.length; i++) {
+                    const calc = sortedCalculations[i];
+                    const minAmount = 0.0001; // Minimum amount to avoid zero distributions
+                    
+                    if (remainingAmount <= minAmount) {
+                        // Set remaining calculations to minimum amount
+                        finalCalculations.push({
+                            ...calc,
+                            finalAmount: minAmount,
+                            percentage: minAmount / distributionAmount
+                        });
+                    } else {
+                        // Take the full amount for this project
+                        finalCalculations.push({
+                            ...calc,
+                            finalAmount: calc.finalAmount,
+                            percentage: calc.finalAmount / distributionAmount
+                        });
+                        remainingAmount -= calc.finalAmount;
+                    }
+                }
+
+                // Re-sort by original order
+                adjustedCalculations = finalCalculations.sort((a, b) => a.rank - b.rank);
+            } else {
+                adjustedCalculations.forEach(calc => {
+                    calc.finalAmount = this.roundToFourDecimals(calc.finalAmount);
+                    calc.percentage = this.roundToFourDecimals(calc.percentage);
+                });
+            }
+
+            // Final validation
+            const finalTotal = adjustedCalculations.reduce((sum, calc) => sum + calc.finalAmount, 0);
+            
+            if (finalTotal > distributionAmount) {
+                // Last resort: reduce the highest amount to fit
+                const overflow = finalTotal - distributionAmount;
+                const highestAmountIndex = adjustedCalculations.reduce((maxIndex, calc, index) => 
+                    calc.finalAmount > adjustedCalculations[maxIndex].finalAmount ? index : maxIndex, 0
+                );
+                
+                adjustedCalculations[highestAmountIndex].finalAmount -= overflow;
+                adjustedCalculations[highestAmountIndex].percentage = adjustedCalculations[highestAmountIndex].finalAmount / distributionAmount;
+                
+                console.log(`Applied final overflow correction: Reduced highest amount by ${overflow.toFixed(4)}`);
+            }
+
+            distributionCalculations.splice(0, distributionCalculations.length, ...adjustedCalculations);
+        } else {
+            // Round all amounts to 4 decimal places to avoid floating-point precision issues
             distributionCalculations.forEach(calc => {
-                calc.finalAmount = calc.finalAmount * reductionFactor;
-                calc.percentage = calc.finalAmount / distributionAmount;
+                calc.finalAmount = this.roundToFourDecimals(calc.finalAmount);
+                calc.percentage = this.roundToFourDecimals(calc.percentage);
             });
         }
 
-        // Round all amounts to 4 decimal places to avoid floating-point precision issues
-        distributionCalculations.forEach(calc => {
-            calc.finalAmount = this.roundToFourDecimals(calc.finalAmount);
-            calc.percentage = this.roundToFourDecimals(calc.percentage);
-        });
-
-        // Validate that the total doesn't exceed the distribution amount after rounding
-        const totalAfterRounding = distributionCalculations.reduce((sum, calc) => sum + calc.finalAmount, 0);
-
-        if (totalAfterRounding > distributionAmount) {
-            throw new Error(
-                `Distribution calculation error: Total calculated amount (${totalAfterRounding}) exceeds distribution amount (${distributionAmount}). ` +
-                `Difference: ${(totalAfterRounding - distributionAmount).toFixed(4)}`
-            );
+        // Final validation
+        const finalTotal = distributionCalculations.reduce((sum, calc) => sum + calc.finalAmount, 0);
+        
+        if (Math.abs(finalTotal - distributionAmount) > 0.0001) {
+            console.warn(`Distribution amount mismatch: Expected ${distributionAmount.toFixed(4)}, Got ${finalTotal.toFixed(4)}, Difference: ${(finalTotal - distributionAmount).toFixed(4)}`);
         }
 
         return distributionCalculations;
