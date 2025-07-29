@@ -7,6 +7,7 @@ import { ImpactGraphService } from './impact-graph.service';
 import { DiscordService, DistributionNotification } from './discord.service';
 import { config } from '../config';
 import { erc20Abi } from 'viem';
+import { withTimeoutAndRetry } from '../utils/rpc.util';
 import { AppDataSource } from '../data-source';
 
 export interface WalletInfo {
@@ -169,11 +170,27 @@ export class WalletService {
                 throw new Error(`Wallet ${walletAddress} not found in database`);
             }
 
-            // Get distribution token balance
+            // Get distribution token balance with retry logic
             const distributionTokenAddress = config.blockchain.tokenAddress;
             const distributionTokenContract = new ethers.Contract(distributionTokenAddress, erc20Abi, this.provider);
-            const balanceWei = await distributionTokenContract.balanceOf(wallet.address);
-            const balance = ethers.formatEther(balanceWei);
+            
+            let balanceWei;
+            let balance;
+            
+            try {
+                balanceWei = await withTimeoutAndRetry(
+                    () => distributionTokenContract.balanceOf(wallet.address),
+                    { timeoutMs: 15000, maxRetries: 2, baseDelayMs: 1000 }
+                );
+                balance = ethers.formatEther(balanceWei);
+            } catch (balanceError) {
+                console.error(`Failed to get token balance for ${wallet.address}:`, balanceError);
+                
+                // If we can't get the balance, assume it's 0 to prevent the service from crashing
+                balanceWei = 0n;
+                balance = '0';
+                console.log(`Using fallback balance of 0 for wallet ${wallet.address}`);
+            }
 
             console.log("Starting distribution of funds from wallet", wallet.address, "with balance", balance);
 
@@ -273,7 +290,17 @@ export class WalletService {
                         recipients.reduce((sum, recipient) => sum + parseFloat(recipient.amount), 0).toString()
                     );
                     
-                    const isApproved = await this.donationHandlerService.isApproved(wallet.address, totalAmountWei);
+                    let isApproved = false;
+                    try {
+                        isApproved = await withTimeoutAndRetry(
+                            () => this.donationHandlerService.isApproved(wallet.address, totalAmountWei),
+                            { timeoutMs: 15000, maxRetries: 2, baseDelayMs: 1000 }
+                        );
+                    } catch (approvalCheckError) {
+                        console.error(`Failed to check approval status for ${wallet.address}:`, approvalCheckError);
+                        // If we can't check approval, assume we need to approve
+                        isApproved = false;
+                    }
                     
                     if (!isApproved) {
                         console.log(`Approval needed for ${ethers.formatEther(totalAmountWei)} GIV. Approving...`);

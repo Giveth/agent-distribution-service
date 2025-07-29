@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import { config } from '../config';
 import { FeeRefillerService } from './fee-refiller.service';
 import { deriveWalletFromSeedPhrase } from '../utils/wallet.util';
+import { withTimeoutAndRetry } from '../utils/rpc.util';
 
 export interface TransactionRequest {
   to: string;
@@ -81,13 +82,31 @@ export class TransactionService {
         gasPrice: ethers.formatUnits(tx.gasPrice, 'gwei') + ' gwei'
       });
 
-      // Send transaction using the derived wallet
-      const transaction = await wallet.sendTransaction(tx);
+      // Send transaction using the derived wallet with timeout and retry
+      const transaction = await withTimeoutAndRetry(
+        () => wallet.sendTransaction(tx),
+        { timeoutMs: 60000, maxRetries: 2, baseDelayMs: 2000 }
+      );
       
       console.log(`Transaction sent: ${transaction.hash}`);
 
-      // Wait for transaction confirmation
-      const receipt = await transaction.wait();
+      // Wait for transaction confirmation with retry logic
+      let receipt;
+      try {
+        receipt = await withTimeoutAndRetry(
+          () => transaction.wait(),
+          { timeoutMs: 120000, maxRetries: 2, baseDelayMs: 5000 } // 2 minutes timeout for confirmation
+        );
+      } catch (waitError) {
+        console.warn(`Transaction wait failed for ${transaction.hash}:`, waitError);
+        
+        // If waiting fails, we still have the transaction hash, so we can return it
+        // The transaction might still be successful, just the receipt lookup failed
+        return {
+          transactionHash: transaction.hash,
+          feeRefillResult: refillResult
+        };
+      }
 
       return {
         transactionHash: receipt?.hash || transaction.hash,
