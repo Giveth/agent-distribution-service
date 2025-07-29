@@ -191,7 +191,32 @@ export class DonationHandlerService {
             // Create donation handler contract instance
             const donationHandlerContract = new ethers.Contract(donationHandlerAddress, donationHandlerAbi, this.provider);
 
-            // Send transaction for single donation
+            // Estimate gas for single donation and apply safety factor
+            let gasLimit: bigint;
+            try {
+                const estimatedGas = await this.provider.estimateGas({
+                    from: fromWalletAddress,
+                    to: donationHandlerAddress,
+                    data: donationHandlerContract.interface.encodeFunctionData('donateERC20', [
+                        distributionTokenAddress, // Token address
+                        recipient.address, // Recipient address
+                        amountInWei, // Amount
+                        recipient.data || '0x' // Data
+                    ])
+                });
+                
+                // Apply 2x safety factor to prevent out of gas errors
+                gasLimit = (estimatedGas * 2n);
+                
+                console.log(`Single donation gas estimation: ${estimatedGas.toString()} -> ${gasLimit.toString()} (2x safety factor)`);
+            } catch (gasEstimateError) {
+                console.warn(`Gas estimation failed for single donation, using fallback: ${gasEstimateError}`);
+                // Fallback gas limit for single donation
+                gasLimit = 300000n;
+                console.log(`Using fallback gas limit: ${gasLimit.toString()}`);
+            }
+
+            // Send transaction for single donation with estimated gas limit
             const transactionRequest: TransactionRequest = {
                 from: fromWalletAddress,
                 to: donationHandlerAddress,
@@ -202,6 +227,7 @@ export class DonationHandlerService {
                     amountInWei, // Amount
                     recipient.data || '0x' // Data
                 ]),
+                gasLimit: gasLimit,
             };
 
             const result = await this.transactionService.sendTransaction(transactionRequest, walletInfo.hdPath);
@@ -288,7 +314,33 @@ export class DonationHandlerService {
             // Create donation handler contract instance
             const donationHandlerContract = new ethers.Contract(donationHandlerAddress, donationHandlerAbi, this.provider);
 
-            // Send transaction for batch donation
+            // Estimate gas for batch donation and apply safety factor
+            let gasLimit: bigint;
+            try {
+                const estimatedGas = await this.provider.estimateGas({
+                    from: fromWalletAddress,
+                    to: donationHandlerAddress,
+                    data: donationHandlerContract.interface.encodeFunctionData('donateManyERC20', [
+                        distributionTokenAddress, // Token address
+                        totalAmountWei, // Total amount
+                        recipientAddresses, // Recipient addresses
+                        amounts, // Amounts
+                        dataArray // Data array
+                    ])
+                });
+                
+                // Apply 2.5x safety factor for batch transactions (more complex)
+                gasLimit = (estimatedGas * 25n) / 10n; // 2.5x
+                
+                console.log(`Batch donation gas estimation: ${estimatedGas.toString()} -> ${gasLimit.toString()} (2.5x safety factor)`);
+            } catch (gasEstimateError) {
+                console.warn(`Gas estimation failed for batch donation, using fallback: ${gasEstimateError}`);
+                // Fallback gas limit for batch donation (higher due to complexity)
+                gasLimit = 600000n;
+                console.log(`Using fallback gas limit: ${gasLimit.toString()}`);
+            }
+
+            // Send transaction for batch donation with estimated gas limit
             const transactionRequest: TransactionRequest = {
                 from: fromWalletAddress,
                 to: donationHandlerAddress,
@@ -300,6 +352,7 @@ export class DonationHandlerService {
                     amounts, // Amounts
                     dataArray // Data array
                 ]),
+                gasLimit: gasLimit,
             };
 
             const result = await this.transactionService.sendTransaction(transactionRequest, walletInfo.hdPath);

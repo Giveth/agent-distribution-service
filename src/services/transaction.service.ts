@@ -9,6 +9,7 @@ export interface TransactionRequest {
   data: string;
   value?: string;
   from: string;
+  gasLimit?: bigint; // Optional custom gas limit
 }
 
 export interface TransactionResponse {
@@ -71,7 +72,7 @@ export class TransactionService {
         to: request.to as `0x${string}`,
         data: request.data as `0x${string}`,
         value: request.value ? ethers.parseEther(request.value) : 0n,
-        gasLimit: feeEstimate.gasLimit,
+        gasLimit: request.gasLimit || feeEstimate.gasLimit, // Use custom gas limit if provided
         gasPrice: feeEstimate.gasPrice
       };
 

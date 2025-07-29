@@ -54,8 +54,8 @@ export class FeeRefillerService {
         value: ethers.parseEther(value)
       });
 
-      // Add 20% buffer for gas estimation
-      const gasLimitWithBuffer = (gasLimit * 120n) / 100n;
+      // Add 50% buffer for gas estimation to prevent out of gas errors
+      const gasLimitWithBuffer = (gasLimit * 150n) / 100n;
       const totalFee = gasLimitWithBuffer * currentGasPrice;
 
       return {
@@ -166,8 +166,8 @@ export class FeeRefillerService {
       }
     }
     
-    // Add buffer for complex contract interactions
-    const contractInteractionBuffer = 100000n;
+    // Add buffer for complex contract interactions (increased to prevent out of gas errors)
+    const contractInteractionBuffer = 200000n;
     
     return baseGas + dataGas + contractInteractionBuffer;
   }

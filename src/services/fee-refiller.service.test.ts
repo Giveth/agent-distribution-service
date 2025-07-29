@@ -41,10 +41,10 @@ describe('FeeRefillerService', () => {
       const estimate = await feeRefillerService.estimateTransactionFee(to, data, value);
 
       expect(estimate).to.exist;
-      expect(estimate.gasLimit).to.equal(ethers.parseUnits('25200', 'wei')); // 21000 * 1.2 (20% buffer)
+      expect(estimate.gasLimit).to.equal(ethers.parseUnits('31500', 'wei')); // 21000 * 1.5 (50% buffer)
       expect(estimate.gasPrice).to.equal(ethers.parseUnits('30', 'gwei'));
-      expect(estimate.totalFee).to.equal(ethers.parseEther('0.000756')); // 25200 * 30 gwei = 756000000000000 wei
-      expect(estimate.estimatedFeeInPOL).to.equal('0.000756');
+      expect(estimate.totalFee).to.equal(ethers.parseEther('0.000945')); // 31500 * 30 gwei = 945000000000000 wei
+      expect(estimate.estimatedFeeInPOL).to.equal('0.000945');
     });
   });
 
