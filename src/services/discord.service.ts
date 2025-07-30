@@ -31,6 +31,15 @@ export interface DistributionNotification {
   causeId?: number;
 }
 
+export interface DistributionFailureNotification {
+  walletAddress: string;
+  totalBalance: string;
+  attemptedAmount: string;
+  totalRecipients: number;
+  error: string;
+  causeId?: number;
+}
+
 export interface FeeAlertNotification {
   walletAddress: string;
   currentBalance: string;
@@ -403,6 +412,24 @@ export class DiscordService {
   }
 
   /**
+   * Send distribution failure notification
+   */
+  async sendDistributionFailureNotification(notification: DistributionFailureNotification): Promise<void> {
+    if (!this.isReady) {
+      console.warn('Discord bot not ready, skipping distribution failure notification');
+      return;
+    }
+
+    try {
+      const channel = await this.getNotificationChannel();
+      const embed = this.createDistributionFailureEmbed(notification);
+      await channel.send({ embeds: [embed] });
+    } catch (error) {
+      console.error('Failed to send distribution failure notification:', error);
+    }
+  }
+
+  /**
    * Send fee provider balance alert
    */
   async sendFeeAlert(notification: FeeAlertNotification): Promise<void> {
@@ -477,6 +504,29 @@ export class DiscordService {
 
     if (topRecipients) {
       embed.addFields({ name: 'Top Recipients', value: topRecipients, inline: false });
+    }
+
+    return embed;
+  }
+
+  /**
+   * Create distribution failure embed
+   */
+  private createDistributionFailureEmbed(notification: DistributionFailureNotification): EmbedBuilder {
+    const embed = new EmbedBuilder()
+      .setTitle('❌ Fund Distribution Failed')
+      .setColor('#ff0000')
+      .setTimestamp()
+      .addFields(
+        { name: 'Wallet Address', value: `\`${notification.walletAddress}\``, inline: true },
+        { name: 'Total Balance', value: `${notification.totalBalance} GIV`, inline: true },
+        { name: 'Attempted Amount', value: `${notification.attemptedAmount} GIV`, inline: true },
+        { name: 'Recipients', value: notification.totalRecipients.toString(), inline: true },
+        { name: 'Error', value: `\`\`\`${notification.error}\`\`\``, inline: false }
+      );
+
+    if (notification.causeId) {
+      embed.addFields({ name: 'Cause ID', value: notification.causeId.toString(), inline: true });
     }
 
     return embed;

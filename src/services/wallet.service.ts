@@ -4,7 +4,7 @@ import { DistributionRepository } from '../repositories/distribution.repository'
 import { FundAllocationService, Project } from './fund-allocation.service';
 import { DonationHandlerService, DonationRecipient } from './donation-handler.service';
 import { ImpactGraphService } from './impact-graph.service';
-import { DiscordService, DistributionNotification } from './discord.service';
+import { DiscordService, DistributionNotification, DistributionFailureNotification } from './discord.service';
 import { config } from '../config';
 import { erc20Abi } from 'viem';
 import { withTimeoutAndRetry } from '../utils/rpc.util';
@@ -352,6 +352,50 @@ export class WalletService {
                 } catch (error) {
                     console.error(`Failed to send batch donation transaction:`, error);
                     failureCount = recipients.length;
+                    
+                    // Calculate total distributed amount for failure notification
+                    const totalDistributed = distributionCalculations.reduce((sum: number, calc: any) => sum + calc.finalAmount, 0);
+                    
+                    // If the main transaction failed, we should not proceed with notifications
+                    // Return early with failure information
+                    const failedDistributionResult = {
+                        walletAddress: wallet.address,
+                        totalBalance: balance,
+                        distributedAmount: '0',
+                        transactions: [],
+                        summary: {
+                            totalRecipients: projects.length,
+                            totalTransactions: 0,
+                            successCount: 0,
+                            failureCount: recipients.length,
+                        },
+                        projectsDistributionDetails: []
+                    };
+
+                    console.log('Distribution failed due to transaction error. Not sending notifications to Discord or Impact Graph.');
+                    
+                    // Send failure notification to Discord
+                    try {
+                        if (!this.discordService) {
+                            this.discordService = new DiscordService();
+                            await this.discordService.initialize();
+                        }
+                        
+                        const failureNotification: DistributionFailureNotification = {
+                            walletAddress: wallet.address,
+                            totalBalance: balance,
+                            attemptedAmount: totalDistributed.toString(),
+                            totalRecipients: projects.length,
+                            error: error instanceof Error ? error.message : 'Unknown error',
+                            causeId,
+                        };
+                        
+                        await this.discordService.sendDistributionFailureNotification(failureNotification);
+                    } catch (discordError) {
+                        console.error('Failed to send Discord failure notification:', discordError);
+                    }
+                    
+                    return failedDistributionResult;
                 }
             }
 
@@ -380,67 +424,95 @@ export class WalletService {
                 projectsDistributionDetails
             };
 
-            // Save distribution data to database
-            try {
-                const savedDistribution = await this.distributionRepository.saveDistribution(distributionResult, causeId);
-                console.log(`Distribution saved to database with ID: ${savedDistribution.id}`);
-
-                // Sync to GraphQL endpoint
-                if (projectsDistributionDetails.length > 0) {
-                    try {
-                        const graphqlResult = await this.graphQLService.syncDistributionData(projectsDistributionDetails, causeId);
-                        
-                        if (graphqlResult.success) {
-                            await this.distributionRepository.updateGraphQLSyncStatus(savedDistribution.id, 'completed');
-                            await this.distributionRepository.updateProjectSharesGraphQLSyncStatus(savedDistribution.id, 'completed');
-                            console.log(`Distribution data synced to GraphQL successfully. Updated ${graphqlResult.data?.length || 0} records.`);
-                        } else {
-                            await this.distributionRepository.updateGraphQLSyncStatus(savedDistribution.id, 'failed', graphqlResult.error);
-                            await this.distributionRepository.updateProjectSharesGraphQLSyncStatus(savedDistribution.id, 'failed', graphqlResult.error);
-                            console.error(`Failed to sync distribution data to GraphQL: ${graphqlResult.error}`);
-                        }
-                    } catch (error) {
-                        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                        await this.distributionRepository.updateGraphQLSyncStatus(savedDistribution.id, 'failed', errorMessage);
-                        await this.distributionRepository.updateProjectSharesGraphQLSyncStatus(savedDistribution.id, 'failed', errorMessage);
-                        console.error(`Error syncing to GraphQL: ${errorMessage}`);
-                    }
-                } else {
-                    await this.distributionRepository.updateGraphQLSyncStatus(savedDistribution.id, 'completed');
-                    await this.distributionRepository.updateProjectSharesGraphQLSyncStatus(savedDistribution.id, 'completed');
-                    console.log('No distribution data to sync to GraphQL');
-                }
-            } catch (error) {
-                console.error('Failed to save distribution data:', error);
-                // Continue with the distribution result even if saving fails
-            }
-
-            // Send Discord notification for successful distributions
-            if (distributionResult.summary.totalTransactions > 0) {
+            // Only proceed with notifications if we have successful transactions
+            if (distributionResult.summary.successCount > 0 && distributionResult.summary.failureCount === 0) {
+                // Save distribution data to database
                 try {
-                    // Initialize Discord service if not already initialized
-                    if (!this.discordService) {
-                        this.discordService = new DiscordService();
-                        await this.discordService.initialize();
+                    const savedDistribution = await this.distributionRepository.saveDistribution(distributionResult, causeId);
+                    console.log(`Distribution saved to database with ID: ${savedDistribution.id}`);
+
+                    // Sync to GraphQL endpoint
+                    if (projectsDistributionDetails.length > 0) {
+                        try {
+                            const graphqlResult = await this.graphQLService.syncDistributionData(projectsDistributionDetails, causeId);
+                            
+                            if (graphqlResult.success) {
+                                await this.distributionRepository.updateGraphQLSyncStatus(savedDistribution.id, 'completed');
+                                await this.distributionRepository.updateProjectSharesGraphQLSyncStatus(savedDistribution.id, 'completed');
+                                console.log(`Distribution data synced to GraphQL successfully. Updated ${graphqlResult.data?.length || 0} records.`);
+                            } else {
+                                await this.distributionRepository.updateGraphQLSyncStatus(savedDistribution.id, 'failed', graphqlResult.error);
+                                await this.distributionRepository.updateProjectSharesGraphQLSyncStatus(savedDistribution.id, 'failed', graphqlResult.error);
+                                console.error(`Failed to sync distribution data to GraphQL: ${graphqlResult.error}`);
+                            }
+                        } catch (error) {
+                            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+                            await this.distributionRepository.updateGraphQLSyncStatus(savedDistribution.id, 'failed', errorMessage);
+                            await this.distributionRepository.updateProjectSharesGraphQLSyncStatus(savedDistribution.id, 'failed', errorMessage);
+                            console.error(`Error syncing to GraphQL: ${errorMessage}`);
+                        }
+                    } else {
+                        await this.distributionRepository.updateGraphQLSyncStatus(savedDistribution.id, 'completed');
+                        await this.distributionRepository.updateProjectSharesGraphQLSyncStatus(savedDistribution.id, 'completed');
+                        console.log('No distribution data to sync to GraphQL');
                     }
-                    
-                    const notification: DistributionNotification = {
-                        walletAddress: distributionResult.walletAddress,
-                        totalBalance: distributionResult.totalBalance,
-                        distributedAmount: distributionResult.distributedAmount,
-                        totalRecipients: distributionResult.summary.totalRecipients,
-                        totalTransactions: distributionResult.summary.totalTransactions,
-                        successCount: distributionResult.summary.successCount,
-                        failureCount: distributionResult.summary.failureCount,
-                        projectsDistributionDetails: distributionResult.projectsDistributionDetails,
-                        transactions: distributionResult.transactions,
-                        causeId,
-                    };
-                    
-                    await this.discordService.sendDistributionNotification(notification);
                 } catch (error) {
-                    console.error('Failed to send Discord notification:', error);
-                    // Don't fail the distribution if Discord notification fails
+                    console.error('Failed to save distribution data:', error);
+                    // Continue with the distribution result even if saving fails
+                }
+
+                // Send Discord notification for successful distributions
+                if (distributionResult.summary.totalTransactions > 0) {
+                    try {
+                        // Initialize Discord service if not already initialized
+                        if (!this.discordService) {
+                            this.discordService = new DiscordService();
+                            await this.discordService.initialize();
+                        }
+                        
+                        const notification: DistributionNotification = {
+                            walletAddress: distributionResult.walletAddress,
+                            totalBalance: distributionResult.totalBalance,
+                            distributedAmount: distributionResult.distributedAmount,
+                            totalRecipients: distributionResult.summary.totalRecipients,
+                            totalTransactions: distributionResult.summary.totalTransactions,
+                            successCount: distributionResult.summary.successCount,
+                            failureCount: distributionResult.summary.failureCount,
+                            projectsDistributionDetails: distributionResult.projectsDistributionDetails,
+                            transactions: distributionResult.transactions,
+                            causeId,
+                        };
+                        
+                        await this.discordService.sendDistributionNotification(notification);
+                    } catch (error) {
+                        console.error('Failed to send Discord notification:', error);
+                        // Don't fail the distribution if Discord notification fails
+                    }
+                }
+            } else {
+                console.log('Distribution completed with failures. Skipping notifications to Discord and Impact Graph.');
+                
+                // Send failure notification for partial failures
+                if (distributionResult.summary.failureCount > 0) {
+                    try {
+                        if (!this.discordService) {
+                            this.discordService = new DiscordService();
+                            await this.discordService.initialize();
+                        }
+                        
+                        const failureNotification: DistributionFailureNotification = {
+                            walletAddress: wallet.address,
+                            totalBalance: balance,
+                            attemptedAmount: totalDistributed.toString(),
+                            totalRecipients: projects.length,
+                            error: `Distribution completed with ${distributionResult.summary.failureCount} failures out of ${distributionResult.summary.totalRecipients} recipients`,
+                            causeId,
+                        };
+                        
+                        await this.discordService.sendDistributionFailureNotification(failureNotification);
+                    } catch (discordError) {
+                        console.error('Failed to send Discord failure notification:', discordError);
+                    }
                 }
             }
 
