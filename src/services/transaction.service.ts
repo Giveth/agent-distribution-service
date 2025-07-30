@@ -100,15 +100,17 @@ export class TransactionService {
           baseDelayMs: 5000,
           maxBlocksToWait: 50
         });
-      } catch (waitError) {
-        console.warn(`Transaction wait failed for ${transaction.hash}:`, waitError);
         
-        // If waiting fails, we still have the transaction hash, so we can return it
-        // The transaction might still be successful, just the receipt lookup failed
-        return {
-          transactionHash: transaction.hash,
-          feeRefillResult: refillResult
-        };
+        // If receipt is null, it means the transaction timed out or failed
+        if (!receipt) {
+          console.error(`Transaction confirmation failed for ${transaction.hash}: Receipt is null (likely timeout)`);
+          throw new Error(`Transaction confirmation failed: Receipt is null (likely timeout)`);
+        }
+      } catch (waitError) {
+        console.error(`Transaction wait failed for ${transaction.hash}:`, waitError);
+        
+        // Treat transaction wait failures as complete failures
+        throw new Error(`Transaction confirmation failed: ${waitError instanceof Error ? waitError.message : 'Unknown error'}`);
       }
 
       return {

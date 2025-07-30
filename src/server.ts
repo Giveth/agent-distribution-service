@@ -86,9 +86,14 @@ router.post(
       const walletIndex = index !== undefined ? index : await walletService.getNextAvailableIndex();
       
       const wallet = await walletService.generateWallet(walletIndex);
-      res.json(wallet);
+      res.status(200).json({
+        success: true,
+        message: "Wallet generated successfully",
+        data: wallet
+      });
     } catch (error) {
       res.status(500).json({
+        success: false,
         error: error instanceof Error ? error.message : "Unknown error",
       });
     }
@@ -100,9 +105,14 @@ router.get("/wallets", async (req: Request, res: Response) => {
   try {
     console.log("Get all wallets endpoint hit");
     const wallets = await walletService.getManagedWallets();
-    res.json(wallets);
+    res.status(200).json({
+      success: true,
+      message: "Wallets retrieved successfully",
+      data: wallets
+    });
   } catch (error) {
     res.status(500).json({
+      success: false,
       error: error instanceof Error ? error.message : "Unknown error",
     });
   }
@@ -117,9 +127,49 @@ router.post(
       const { walletAddress, projects, causeId } = req.body;
       
       const result = await walletService.distributeFunds(walletAddress, projects, causeId);
-      res.json(result);
+      
+      // Check if the distribution was successful
+      const isSuccessful = result.summary.successCount > 0 && result.summary.failureCount === 0;
+      const hasAnyTransactions = result.summary.totalTransactions > 0;
+      
+      console.log(`Distribution result for ${walletAddress}:`, {
+        successCount: result.summary.successCount,
+        failureCount: result.summary.failureCount,
+        totalTransactions: result.summary.totalTransactions,
+        isSuccessful,
+        hasAnyTransactions
+      });
+      
+      if (isSuccessful) {
+        // Distribution was completely successful
+        console.log(`✅ Distribution completed successfully for ${walletAddress}`);
+        res.status(200).json({
+          success: true,
+          message: "Distribution completed successfully",
+          data: result
+        });
+      } else if (hasAnyTransactions && result.summary.failureCount > 0) {
+        // Distribution had some failures but some transactions succeeded
+        console.log(`⚠️ Distribution completed with some failures for ${walletAddress}`);
+        res.status(207).json({
+          success: false,
+          message: "Distribution completed with some failures",
+          data: result
+        });
+      } else {
+        // Distribution completely failed (no successful transactions)
+        console.log(`❌ Distribution failed completely for ${walletAddress}`);
+        res.status(500).json({
+          success: false,
+          message: "Distribution failed completely",
+          error: "All transactions failed",
+          data: result
+        });
+      }
     } catch (error) {
+      console.error(`❌ Distribution endpoint error for ${req.body.walletAddress}:`, error);
       res.status(500).json({
+        success: false,
         error: error instanceof Error ? error.message : "Unknown error",
       });
     }
@@ -131,9 +181,14 @@ router.get("/fee-status", async (req: Request, res: Response) => {
   try {
     console.log("Fee status endpoint hit");
     const feeStatus = await discordService.getFeeProviderStatus();
-    res.json(feeStatus);
+    res.status(200).json({
+      success: true,
+      message: "Fee status retrieved successfully",
+      data: feeStatus
+    });
   } catch (error) {
     res.status(500).json({
+      success: false,
       error: error instanceof Error ? error.message : "Unknown error",
     });
   }
@@ -144,9 +199,13 @@ router.post("/check-fee-balance", async (req: Request, res: Response) => {
   try {
     console.log("Check fee balance endpoint hit");
     await discordService.checkFeeProviderBalance();
-    res.json({ message: "Fee provider balance check completed" });
+    res.status(200).json({
+      success: true,
+      message: "Fee provider balance check completed"
+    });
   } catch (error) {
     res.status(500).json({
+      success: false,
       error: error instanceof Error ? error.message : "Unknown error",
     });
   }

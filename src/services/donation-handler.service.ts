@@ -232,6 +232,8 @@ export class DonationHandlerService {
 
             const result = await this.transactionService.sendTransaction(transactionRequest, walletInfo.hdPath);
 
+            console.log(`✅ Single donation transaction successful: ${result.transactionHash}`);
+            
             return {
                 transactionHash: result.transactionHash,
                 totalAmount: recipient.amount,
@@ -239,6 +241,8 @@ export class DonationHandlerService {
                 success: true
             };
         } catch (error) {
+            console.error(`❌ Single donation transaction failed:`, error);
+            
             return {
                 totalAmount: recipient.amount,
                 recipientCount: 1,
@@ -357,6 +361,8 @@ export class DonationHandlerService {
 
             const result = await this.transactionService.sendTransaction(transactionRequest, walletInfo.hdPath);
 
+            console.log(`✅ Batch donation transaction successful: ${result.transactionHash}`);
+            
             return {
                 transactionHash: result.transactionHash,
                 totalAmount: ethers.formatEther(totalAmountWei),
@@ -364,6 +370,8 @@ export class DonationHandlerService {
                 success: true
             };
         } catch (error) {
+            console.error(`❌ Batch donation transaction failed:`, error);
+            
             return {
                 totalAmount: '0',
                 recipientCount: recipients.length,
