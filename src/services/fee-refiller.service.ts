@@ -1,6 +1,7 @@
 import { ethers } from 'ethers';
 import { config } from '../config';
 import { DiscordService } from './discord.service';
+import { withTimeoutAndRetry } from '../utils/rpc.util';
 
 export interface FeeRefillResult {
   success: boolean;
@@ -42,17 +43,30 @@ export class FeeRefillerService {
     data: string,
     value: string = '0'
   ): Promise<TransactionFeeEstimate> {
-    // Get current gas price first
-    const gasPrice = await this.provider.getFeeData();
+    // Get current gas price first with retry logic
+    let gasPrice;
+    try {
+      gasPrice = await withTimeoutAndRetry(
+        () => this.provider.getFeeData(),
+        { timeoutMs: 30000, maxRetries: 2, baseDelayMs: 2000 }
+      );
+    } catch (error) {
+      console.warn('Failed to get gas price, using fallback:', error);
+      gasPrice = { gasPrice: ethers.parseUnits('30', 'gwei') };
+    }
+    
     const currentGasPrice = gasPrice.gasPrice || ethers.parseUnits('30', 'gwei');
 
     try {
-      // Estimate gas limit
-      const gasLimit = await this.provider.estimateGas({
-        to,
-        data,
-        value: ethers.parseEther(value)
-      });
+      // Estimate gas limit with retry logic
+      const gasLimit = await withTimeoutAndRetry(
+        () => this.provider.estimateGas({
+          to,
+          data,
+          value: ethers.parseEther(value)
+        }),
+        { timeoutMs: 30000, maxRetries: 2, baseDelayMs: 2000 }
+      );
 
       // Add 50% buffer for gas estimation to prevent out of gas errors
       const gasLimitWithBuffer = (gasLimit * 150n) / 100n;
@@ -68,6 +82,28 @@ export class FeeRefillerService {
       // Handle contract revert errors more gracefully
       if (error instanceof Error) {
         const errorMessage = error.message;
+        
+        // Check for RPC errors that should be handled gracefully
+        const isRpcError = errorMessage.includes('UNKNOWN_ERROR') || 
+                          errorMessage.includes('Unable to perform request') ||
+                          errorMessage.includes('could not coalesce error') ||
+                          errorMessage.includes('code": 19') ||
+                          errorMessage.includes('eth_estimateGas');
+        
+        if (isRpcError) {
+          console.warn(`RPC error during gas estimation: ${errorMessage}. Using fallback gas estimate.`);
+          
+          // Use fallback gas estimate when RPC call fails
+          const fallbackGasLimit = this.getFallbackGasEstimate(data);
+          const totalFee = fallbackGasLimit * currentGasPrice;
+          
+          return {
+            gasLimit: fallbackGasLimit,
+            gasPrice: currentGasPrice,
+            totalFee,
+            estimatedFeeInPOL: ethers.formatEther(totalFee)
+          };
+        }
         
         // Check for specific contract revert errors
         if (errorMessage.includes('execution reverted')) {
@@ -99,7 +135,7 @@ export class FeeRefillerService {
         }
         
         // For other gas estimation errors, provide more context
-        if (errorMessage.includes('estimateGas')) {
+        if (errorMessage.includes('gas estimation failed')) {
           console.warn(`Gas estimation failed: ${errorMessage}. Using fallback gas estimate.`);
           
           // Use fallback gas estimate
@@ -129,7 +165,10 @@ export class FeeRefillerService {
    */
   async hasSufficientBalance(walletAddress: string, requiredFee: bigint): Promise<boolean> {
     try {
-      const balance = await this.provider.getBalance(walletAddress);
+      const balance = await withTimeoutAndRetry(
+        () => this.provider.getBalance(walletAddress),
+        { timeoutMs: 30000, maxRetries: 2, baseDelayMs: 2000 }
+      );
       
       // Check if balance is sufficient for both the required fee and minimum balance
       const requiredAmount = requiredFee > this.minimumBalance ? requiredFee : this.minimumBalance;
@@ -186,7 +225,10 @@ export class FeeRefillerService {
       console.log(`Refilling wallet ${walletAddress} with ${ethers.formatEther(refillAmount)} POL`);
 
       // Check refiller wallet balance
-      const refillerBalance = await this.provider.getBalance(this.refillerWallet.address);
+      const refillerBalance = await withTimeoutAndRetry(
+        () => this.provider.getBalance(this.refillerWallet.address),
+        { timeoutMs: 30000, maxRetries: 2, baseDelayMs: 2000 }
+      );
       if (refillerBalance < refillAmount) {
         return {
           success: false,
@@ -263,7 +305,10 @@ export class FeeRefillerService {
    */
   async checkAndAlertBalance(): Promise<void> {
     try {
-      const balance = await this.provider.getBalance(this.refillerWallet.address);
+      const balance = await withTimeoutAndRetry(
+        () => this.provider.getBalance(this.refillerWallet.address),
+        { timeoutMs: 30000, maxRetries: 2, baseDelayMs: 2000 }
+      );
       const balanceInEth = parseFloat(ethers.formatEther(balance));
       const threshold = parseFloat(config.discord.feeThreshold);
 

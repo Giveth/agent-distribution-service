@@ -2,7 +2,7 @@ import { ethers } from 'ethers';
 import { config } from '../config';
 import { FeeRefillerService } from './fee-refiller.service';
 import { deriveWalletFromSeedPhrase } from '../utils/wallet.util';
-import { withTimeoutAndRetry } from '../utils/rpc.util';
+import { withTimeoutAndRetry, waitForTransactionReceipt } from '../utils/rpc.util';
 
 export interface TransactionRequest {
   to: string;
@@ -94,10 +94,12 @@ export class TransactionService {
       // Wait for transaction confirmation with retry logic
       let receipt;
       try {
-        receipt = await withTimeoutAndRetry(
-          () => transaction.wait(),
-          { timeoutMs: 120000, maxRetries: 2, baseDelayMs: 5000 } // 2 minutes timeout for confirmation
-        );
+        receipt = await waitForTransactionReceipt(transaction, {
+          timeoutMs: 120000, // 2 minutes timeout for confirmation
+          maxRetries: 3,
+          baseDelayMs: 5000,
+          maxBlocksToWait: 50
+        });
       } catch (waitError) {
         console.warn(`Transaction wait failed for ${transaction.hash}:`, waitError);
         
