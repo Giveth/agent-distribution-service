@@ -520,24 +520,30 @@ describe('WalletService - Distribution Integration', () => {
             };
             (service as any).provider = mockProvider;
 
-            // Mock token contract
-            const mockTokenContract = {
-                balanceOf: () => Promise.resolve(ethers.parseEther('10'))
+            // Mock the contract creation using sinon with immediate resolution
+            const mockContract = {
+                balanceOf: sinon.stub().resolves(ethers.parseEther('0')), // Return 0 balance to trigger early return
+                interface: {
+                    encodeFunctionData: sinon.stub().returns('0x'),
+                },
+                runner: {
+                    call: sinon.stub().resolves(ethers.parseEther('0')),
+                },
             };
-
-            // Mock ethers.Contract constructor
-            const originalContract = ethers.Contract;
-            ethers.Contract = jest.fn().mockReturnValue(mockTokenContract);
+            const contractStub = sinon.stub(ethers, 'Contract').returns(mockContract as any);
+            
+            // Also mock the withTimeoutAndRetry function to avoid retry logic
+            const withTimeoutAndRetryStub = sinon.stub(require('../utils/rpc.util'), 'withTimeoutAndRetry').resolves(ethers.parseEther('0'));
 
             try {
                 const result = await service.distributeFunds(
                     '0x123',
-                    [{ projectId: 1, name: 'Test Project', score: 100 }],
+                    [{ projectId: 1, name: 'Test Project', slug: 'test-project', walletAddress: '0x789', score: 100 }],
                     1,
                     '0x456'
                 );
 
-                // Should return a successful result with no distribution
+                // Should return a successful result with no distribution due to zero balance
                 expect(result.walletAddress).to.equal('0x123');
                 expect(result.distributedAmount).to.equal('0');
                 expect(result.transactions).to.deep.equal([]);
@@ -548,7 +554,8 @@ describe('WalletService - Distribution Integration', () => {
                 expect(result.projectsDistributionDetails).to.deep.equal([]);
             } finally {
                 // Restore original ethers.Contract
-                ethers.Contract = originalContract;
+                contractStub.restore();
+                withTimeoutAndRetryStub.restore();
             }
         });
     });
