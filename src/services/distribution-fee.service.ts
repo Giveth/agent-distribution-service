@@ -3,13 +3,13 @@ import { config } from '../config';
 import { DonationHandlerService, DonationRecipient } from './donation-handler.service';
 
 /**
- * Round a number to a specified number of decimal places and format as string
- * This helps prevent precision issues with very small amounts
+ * Truncate a number to a specified number of decimal places and format as string
+ * This helps prevent precision issues and insufficient balance errors
  */
 function roundToDecimals(value: number, decimals: number = 6): string {
   const factor = Math.pow(10, decimals);
-  const rounded = Math.round(value * factor) / factor;
-  return rounded.toFixed(decimals);
+  const truncated = Math.floor(value * factor) / factor;
+  return truncated.toFixed(decimals);
 }
 
 export interface DistributionFeeBreakdown {
