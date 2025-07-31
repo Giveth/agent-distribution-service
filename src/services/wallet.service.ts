@@ -570,7 +570,27 @@ export class WalletService {
 
             return distributionResult;
         } catch (error) {
-            throw new Error(`Failed to distribute funds: ${error instanceof Error ? error.message : 'Unknown error'}`);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            
+            // Handle "Total amount must be greater than 0" error gracefully like insufficient balance
+            if (errorMessage.includes('Total amount must be greater than 0')) {
+                console.log(`Wallet ${walletAddress} has insufficient amount for distribution - skipping distribution`);
+                return {
+                    walletAddress,
+                    totalBalance: "0", // Default to 0 since balance might not be available in catch block
+                    distributedAmount: "0",
+                    transactions: [],
+                    summary: {
+                        totalRecipients: 0,
+                        totalTransactions: 0,
+                        successCount: 0,
+                        failureCount: 0,
+                    },
+                    projectsDistributionDetails: []
+                };
+            }
+            
+            throw new Error(`Failed to distribute funds: ${errorMessage}`);
         }
     }
 

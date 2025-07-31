@@ -492,5 +492,65 @@ describe('WalletService - Distribution Integration', () => {
             });
         });
     });
+
+    describe('Error handling', () => {
+        it('should handle "Total amount must be greater than 0" error gracefully', async () => {
+            // Mock the fundAllocationService to throw the specific error
+            const mockFundAllocationService = {
+                validateDistributionParameters: () => ({
+                    isValid: false,
+                    errors: ['Total amount must be greater than 0']
+                }),
+                calculateDistribution: () => ({ calculations: [] })
+            };
+
+            // Create a service instance with mocked dependencies
+            const service = new WalletService();
+            (service as any).fundAllocationService = mockFundAllocationService;
+
+            // Mock wallet repository to return a valid wallet
+            const mockWalletRepository = {
+                findByAddress: () => Promise.resolve({ address: '0x123', hdPath: 'm/44\'/60\'/0\'/0/0' })
+            };
+            (service as any).walletRepository = mockWalletRepository;
+
+            // Mock provider and contract to return a balance
+            const mockProvider = {
+                getBalance: () => Promise.resolve(ethers.parseEther('1'))
+            };
+            (service as any).provider = mockProvider;
+
+            // Mock token contract
+            const mockTokenContract = {
+                balanceOf: () => Promise.resolve(ethers.parseEther('10'))
+            };
+
+            // Mock ethers.Contract constructor
+            const originalContract = ethers.Contract;
+            ethers.Contract = jest.fn().mockReturnValue(mockTokenContract);
+
+            try {
+                const result = await service.distributeFunds(
+                    '0x123',
+                    [{ projectId: 1, name: 'Test Project', score: 100 }],
+                    1,
+                    '0x456'
+                );
+
+                // Should return a successful result with no distribution
+                expect(result.walletAddress).to.equal('0x123');
+                expect(result.distributedAmount).to.equal('0');
+                expect(result.transactions).to.deep.equal([]);
+                expect(result.summary.totalRecipients).to.equal(0);
+                expect(result.summary.totalTransactions).to.equal(0);
+                expect(result.summary.successCount).to.equal(0);
+                expect(result.summary.failureCount).to.equal(0);
+                expect(result.projectsDistributionDetails).to.deep.equal([]);
+            } finally {
+                // Restore original ethers.Contract
+                ethers.Contract = originalContract;
+            }
+        });
+    });
   });
 });
