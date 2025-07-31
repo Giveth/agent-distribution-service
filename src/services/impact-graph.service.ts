@@ -54,7 +54,6 @@ export interface DistributionData {
 }
 
 export interface CompleteDistributionUpdateInput {
-    causeId: number;
     projects: UpdateCauseProjectDistributionInput[];
     feeBreakdown: UpdateCauseDistributionInput;
 }
@@ -201,7 +200,6 @@ export class ImpactGraphService {
             
             // Prepare complete update
             const completeUpdate: CompleteDistributionUpdateInput = {
-                causeId,
                 projects: projectUpdates,
                 feeBreakdown: feeBreakdownUpdate
             };
