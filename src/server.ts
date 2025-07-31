@@ -130,26 +130,35 @@ router.post(
       const result = await walletService.distributeFunds(walletAddress, projects, causeId, causeOwnerAddress);
       
       // Check if the distribution was successful
-      const isSuccessful = result.summary.successCount > 0 && result.summary.failureCount === 0;
-      const hasAnyTransactions = result.summary.totalTransactions > 0;
+      const isSuccessful = result.summary.failureCount === 0;
+      const hasAnySuccessTransactions = result.summary.successCount > 0;
       
       console.log(`Distribution result for ${walletAddress}:`, {
         successCount: result.summary.successCount,
         failureCount: result.summary.failureCount,
         totalTransactions: result.summary.totalTransactions,
         isSuccessful,
-        hasAnyTransactions
+        hasAnySuccessTransactions
       });
       
       if (isSuccessful) {
         // Distribution was completely successful
-        console.log(`✅ Distribution completed successfully for ${walletAddress}`);
-        res.status(200).json({
-          success: true,
-          message: "Distribution completed successfully",
-          data: result
+        if (hasAnySuccessTransactions) {
+          console.log(`✅ Distribution completed successfully for ${walletAddress}`);
+          res.status(200).json({
+            success: true,
+            message: "Distribution completed successfully",
+            data: result
+          });
+        } else {
+          console.log(`⚠️ Distribution completed for ${walletAddress}, but not enough balance for distribution`);
+          res.status(200).json({
+            success: true,
+            message: "Distribution completed, but not enough balance for distribution",
+            data: result
         });
-      } else if (hasAnyTransactions && result.summary.failureCount > 0) {
+      }
+      } else if (hasAnySuccessTransactions && result.summary.failureCount > 0) {
         // Distribution had some failures but some transactions succeeded
         console.log(`⚠️ Distribution completed with some failures for ${walletAddress}`);
         res.status(207).json({
