@@ -29,6 +29,7 @@ export const stagingConfig: AppConfig = {
     },
     distributionBalanceThreshold: 1000, // Balance threshold for 100% distribution
     distributionPercentage: 5, // Percentage for standard distribution
+    minBalanceForDistribution: 0.1, // Minimum balance for distribution
   },
   feeRefiller: {
     privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || "",

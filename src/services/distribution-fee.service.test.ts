@@ -17,14 +17,14 @@ describe('DistributionFeeService', () => {
       const result = service.calculateDistributionWithFees(totalAmount, causeOwnerAddress);
       
       expect(result.breakdown.totalAmount).to.equal('1000');
-      expect(result.breakdown.causeOwnerAmount).to.equal('30.0'); // 3% of 1000 (configurable)
-      expect(result.breakdown.givgardenAmount).to.equal('50.0'); // 5% of 1000 (configurable)
-      expect(result.breakdown.projectsAmount).to.equal('920.0'); // 92% of 1000 (configurable)
+      expect(result.breakdown.causeOwnerAmount).to.equal('30.000000'); // 3% of 1000 (configurable)
+      expect(result.breakdown.givgardenAmount).to.equal('50.000000'); // 5% of 1000 (configurable)
+      expect(result.breakdown.projectsAmount).to.equal('920.000000'); // 92% of 1000 (configurable)
       
       expect(result.causeOwnerRecipient.address).to.equal(causeOwnerAddress);
-      expect(result.causeOwnerRecipient.amount).to.equal('30.0');
+      expect(result.causeOwnerRecipient.amount).to.equal('30.000000');
       expect(result.givgardenRecipient.address).to.equal(config.blockchain.givgardenAddress);
-      expect(result.givgardenRecipient.amount).to.equal('50.0');
+      expect(result.givgardenRecipient.amount).to.equal('50.000000');
     });
 
     it('should calculate correct fee breakdown for 100 GIV', () => {
@@ -34,9 +34,9 @@ describe('DistributionFeeService', () => {
       const result = service.calculateDistributionWithFees(totalAmount, causeOwnerAddress);
       
       expect(result.breakdown.totalAmount).to.equal('100');
-      expect(result.breakdown.causeOwnerAmount).to.equal('3.0'); // 3% of 100 (configurable)
-      expect(result.breakdown.givgardenAmount).to.equal('5.0'); // 5% of 100 (configurable)
-      expect(result.breakdown.projectsAmount).to.equal('92.0'); // 92% of 100 (configurable)
+      expect(result.breakdown.causeOwnerAmount).to.equal('3.000000'); // 3% of 100 (configurable)
+      expect(result.breakdown.givgardenAmount).to.equal('5.000000'); // 5% of 100 (configurable)
+      expect(result.breakdown.projectsAmount).to.equal('92.000000'); // 92% of 100 (configurable)
     });
 
     it('should handle zero amount correctly', () => {
@@ -46,9 +46,9 @@ describe('DistributionFeeService', () => {
       const result = service.calculateDistributionWithFees(totalAmount, causeOwnerAddress);
       
       expect(result.breakdown.totalAmount).to.equal('0');
-      expect(result.breakdown.causeOwnerAmount).to.equal('0.0');
-      expect(result.breakdown.givgardenAmount).to.equal('0.0');
-      expect(result.breakdown.projectsAmount).to.equal('0.0');
+      expect(result.breakdown.causeOwnerAmount).to.equal('0.000000');
+      expect(result.breakdown.givgardenAmount).to.equal('0.000000');
+      expect(result.breakdown.projectsAmount).to.equal('0.000000');
     });
 
     it('should skip cause owner when address is empty', () => {
@@ -58,14 +58,14 @@ describe('DistributionFeeService', () => {
       const result = service.calculateDistributionWithFees(totalAmount, causeOwnerAddress);
       
       expect(result.breakdown.totalAmount).to.equal('1000');
-      expect(result.breakdown.causeOwnerAmount).to.equal('0.0');
-      expect(result.breakdown.givgardenAmount).to.equal('50.0'); // 5% of 1000
-      expect(result.breakdown.projectsAmount).to.equal('950.0'); // 95% of 1000 (cause owner skipped)
+      expect(result.breakdown.causeOwnerAmount).to.equal('0.000000');
+      expect(result.breakdown.givgardenAmount).to.equal('50.000000'); // 5% of 1000
+      expect(result.breakdown.projectsAmount).to.equal('950.000000'); // 95% of 1000 (cause owner skipped)
       
       expect(result.causeOwnerRecipient.address).to.equal('');
-      expect(result.causeOwnerRecipient.amount).to.equal('0.0');
+      expect(result.causeOwnerRecipient.amount).to.equal('0.000000');
       expect(result.givgardenRecipient.address).to.equal(config.blockchain.givgardenAddress);
-      expect(result.givgardenRecipient.amount).to.equal('50.0');
+      expect(result.givgardenRecipient.amount).to.equal('50.000000');
     });
 
     it('should skip cause owner when address is whitespace only', () => {
@@ -75,12 +75,30 @@ describe('DistributionFeeService', () => {
       const result = service.calculateDistributionWithFees(totalAmount, causeOwnerAddress);
       
       expect(result.breakdown.totalAmount).to.equal('1000');
-      expect(result.breakdown.causeOwnerAmount).to.equal('0.0');
-      expect(result.breakdown.givgardenAmount).to.equal('50.0'); // 5% of 1000
-      expect(result.breakdown.projectsAmount).to.equal('950.0'); // 95% of 1000 (cause owner skipped)
+      expect(result.breakdown.causeOwnerAmount).to.equal('0.000000');
+      expect(result.breakdown.givgardenAmount).to.equal('50.000000'); // 5% of 1000
+      expect(result.breakdown.projectsAmount).to.equal('950.000000'); // 95% of 1000 (cause owner skipped)
       
       expect(result.causeOwnerRecipient.address).to.equal('');
-      expect(result.causeOwnerRecipient.amount).to.equal('0.0');
+      expect(result.causeOwnerRecipient.amount).to.equal('0.000000');
+    });
+
+    it('should handle very small amounts without precision errors', () => {
+      const totalAmount = 0.02; // Very small amount like the error case
+      const causeOwnerAddress = '0x1234567890123456789012345678901234567890';
+      
+      const result = service.calculateDistributionWithFees(totalAmount, causeOwnerAddress);
+      
+      // Should not throw precision errors
+      expect(result.breakdown.totalAmount).to.equal('0.02');
+      expect(parseFloat(result.breakdown.causeOwnerAmount)).to.be.closeTo(0.0006, 0.0001); // 3% of 0.02
+      expect(parseFloat(result.breakdown.givgardenAmount)).to.be.closeTo(0.001, 0.0001); // 5% of 0.02
+      expect(parseFloat(result.breakdown.projectsAmount)).to.be.closeTo(0.0184, 0.0001); // 92% of 0.02
+      
+      // All amounts should be valid numbers
+      expect(() => parseFloat(result.breakdown.causeOwnerAmount)).to.not.throw();
+      expect(() => parseFloat(result.breakdown.givgardenAmount)).to.not.throw();
+      expect(() => parseFloat(result.breakdown.projectsAmount)).to.not.throw();
     });
   });
 
@@ -129,6 +147,25 @@ describe('DistributionFeeService', () => {
       
       expect(result[0].amount).to.equal(0);
     });
+
+    it('should handle very small amounts without precision errors', () => {
+      const originalProjectAmounts = [
+        { project: { name: 'Project A', walletAddress: '0x1111111111111111111111111111111111111111' }, amount: 0.01 },
+        { project: { name: 'Project B', walletAddress: '0x2222222222222222222222222222222222222222' }, amount: 0.01 }
+      ];
+      const totalAmount = 0.02;
+      
+      const result = service.adjustProjectAmountsForFees(originalProjectAmounts, totalAmount);
+      
+      // Should not throw precision errors and should be properly rounded
+      expect(result.length).to.equal(2);
+      expect(result[0].amount).to.be.a('number');
+      expect(result[1].amount).to.be.a('number');
+      
+      // Amounts should be valid and rounded
+      expect(() => result[0].amount.toString()).to.not.throw();
+      expect(() => result[1].amount.toString()).to.not.throw();
+    });
   });
 
   describe('createAllRecipients', () => {
@@ -148,21 +185,21 @@ describe('DistributionFeeService', () => {
       
       // First should be cause owner
       expect(result[0].address).to.equal(causeOwnerAddress);
-      expect(result[0].amount).to.equal('30.0');
+      expect(result[0].amount).to.equal('30.000000');
       
       // Second should be GIVgarden
       expect(result[1].address).to.equal(config.blockchain.givgardenAddress);
-      expect(result[1].amount).to.equal('50.0');
+      expect(result[1].amount).to.equal('50.000000');
       
       // Then projects
       expect(result[2].address).to.equal('0x1111111111111111111111111111111111111111');
-      expect(result[2].amount).to.equal('460');
+      expect(result[2].amount).to.equal('460.000000');
       
       expect(result[3].address).to.equal('0x2222222222222222222222222222222222222222');
-      expect(result[3].amount).to.equal('276');
+      expect(result[3].amount).to.equal('276.000000');
       
       expect(result[4].address).to.equal('0x3333333333333333333333333333333333333333');
-      expect(result[4].amount).to.equal('184');
+      expect(result[4].amount).to.equal('184.000000');
     });
 
     it('should skip cause owner in recipients when address is empty', () => {
@@ -181,17 +218,17 @@ describe('DistributionFeeService', () => {
       
       // First should be GIVgarden
       expect(result[0].address).to.equal(config.blockchain.givgardenAddress);
-      expect(result[0].amount).to.equal('50.0');
+      expect(result[0].amount).to.equal('50.000000');
       
       // Then projects
       expect(result[1].address).to.equal('0x1111111111111111111111111111111111111111');
-      expect(result[1].amount).to.equal('460');
+      expect(result[1].amount).to.equal('460.000000');
       
       expect(result[2].address).to.equal('0x2222222222222222222222222222222222222222');
-      expect(result[2].amount).to.equal('276');
+      expect(result[2].amount).to.equal('276.000000');
       
       expect(result[3].address).to.equal('0x3333333333333333333333333333333333333333');
-      expect(result[3].amount).to.equal('184');
+      expect(result[3].amount).to.equal('184.000000');
     });
   });
 

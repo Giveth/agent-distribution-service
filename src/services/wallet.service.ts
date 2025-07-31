@@ -139,6 +139,13 @@ export class WalletService {
             };
         }
 
+        if (balance <= config.blockchain.minBalanceForDistribution) {
+            return {
+                amount: 0,
+                strategy: 'skip distribution (low balance for distribution)'
+            };
+        }
+
         const balanceThreshold = config.blockchain.distributionBalanceThreshold;
 
         if (balance <= balanceThreshold) {

@@ -2,6 +2,16 @@ import { ethers } from 'ethers';
 import { config } from '../config';
 import { DonationHandlerService, DonationRecipient } from './donation-handler.service';
 
+/**
+ * Round a number to a specified number of decimal places and format as string
+ * This helps prevent precision issues with very small amounts
+ */
+function roundToDecimals(value: number, decimals: number = 6): string {
+  const factor = Math.pow(10, decimals);
+  const rounded = Math.round(value * factor) / factor;
+  return rounded.toFixed(decimals);
+}
+
 export interface DistributionFeeBreakdown {
   causeOwnerAmount: string;
   givgardenAmount: string;
@@ -48,10 +58,10 @@ export class DistributionFeeService {
     const givgardenAmountWei = (totalAmountWei * BigInt(givgardenPercentage)) / 100n;
     const projectsAmountWei = totalAmountWei - causeOwnerAmountWei - givgardenAmountWei;
 
-    // Convert back to ether format for consistency
-    const causeOwnerAmount = ethers.formatEther(causeOwnerAmountWei);
-    const givgardenAmount = ethers.formatEther(givgardenAmountWei);
-    const projectsAmount = ethers.formatEther(projectsAmountWei);
+    // Convert back to ether format for consistency and round to prevent precision issues
+    const causeOwnerAmount = roundToDecimals(parseFloat(ethers.formatEther(causeOwnerAmountWei)), 6);
+    const givgardenAmount = roundToDecimals(parseFloat(ethers.formatEther(givgardenAmountWei)), 6);
+    const projectsAmount = roundToDecimals(parseFloat(ethers.formatEther(projectsAmountWei)), 6);
 
     const breakdown: DistributionFeeBreakdown = {
       causeOwnerAmount,
@@ -110,7 +120,7 @@ export class DistributionFeeService {
     
     return originalProjectAmounts.map(item => ({
       project: item.project,
-      amount: item.amount * scaleFactor
+      amount: parseFloat(roundToDecimals(item.amount * scaleFactor, 6))
     }));
   }
 
@@ -142,7 +152,7 @@ export class DistributionFeeService {
     for (const item of projectAmounts) {
       recipients.push({
         address: item.project.walletAddress,
-        amount: item.amount.toString(),
+        amount: roundToDecimals(item.amount, 6),
         data: '0x'
       });
     }

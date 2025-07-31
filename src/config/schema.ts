@@ -28,6 +28,7 @@ export interface BlockchainConfig {
   };
   distributionBalanceThreshold: number; // Balance threshold for 100% distribution (default: 1000)
   distributionPercentage: number; // Percentage for standard distribution (default: 5)
+  minBalanceForDistribution: number; // Minimum balance for distribution (default: 0.1)
 }
 
 export interface FeeRefillerConfig {

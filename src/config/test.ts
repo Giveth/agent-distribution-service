@@ -29,6 +29,7 @@ export const testConfig: AppConfig = {
     },
     distributionBalanceThreshold: 100, // Lower threshold for tests
     distributionPercentage: 5, // Percentage for standard distribution
+    minBalanceForDistribution: 0.1, // Minimum balance for distribution
   },
   feeRefiller: {
     privateKey: "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",

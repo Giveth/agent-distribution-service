@@ -29,6 +29,7 @@ export const developmentConfig: AppConfig = {
     },
     distributionBalanceThreshold: 1000, // Balance threshold for 100% distribution
     distributionPercentage: 5, // Percentage for standard distribution
+    minBalanceForDistribution: 1, // Minimum balance for distribution
   },
   feeRefiller: {
     privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80",

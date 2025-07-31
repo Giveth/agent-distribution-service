@@ -53,6 +53,7 @@ export const config: AppConfig = {
     },
     distributionBalanceThreshold: Number(process.env.DISTRIBUTION_BALANCE_THRESHOLD) || baseConfig.blockchain.distributionBalanceThreshold,
     distributionPercentage: Number(process.env.DISTRIBUTION_PERCENTAGE) || baseConfig.blockchain.distributionPercentage,
+    minBalanceForDistribution: Number(process.env.MIN_BALANCE_FOR_DISTRIBUTION) || baseConfig.blockchain.minBalanceForDistribution,
   },
   feeRefiller: {
     privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || baseConfig.feeRefiller.privateKey,
