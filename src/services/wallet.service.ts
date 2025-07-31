@@ -3,6 +3,7 @@ import { WalletRepository } from '../repositories/wallet.repository';
 import { DistributionRepository } from '../repositories/distribution.repository';
 import { FundAllocationService, Project } from './fund-allocation.service';
 import { DonationHandlerService, DonationRecipient } from './donation-handler.service';
+import { DistributionFeeService } from './distribution-fee.service';
 import { ImpactGraphService } from './impact-graph.service';
 import { DiscordService, DistributionNotification, DistributionFailureNotification } from './discord.service';
 import { config } from '../config';
@@ -34,6 +35,12 @@ export interface DistributionResult {
         project: Project;
         amount: string;
     }>;
+    feeBreakdown?: {
+        causeOwnerAmount: string;
+        givgardenAmount: string;
+        projectsAmount: string;
+        totalAmount: string;
+    };
 }
 
 export class WalletService {
@@ -42,6 +49,7 @@ export class WalletService {
     private distributionRepository: DistributionRepository;
     private fundAllocationService: FundAllocationService;
     private donationHandlerService: DonationHandlerService;
+    private distributionFeeService: DistributionFeeService;
     private graphQLService: ImpactGraphService;
     private discordService: DiscordService | null = null;
     private baseHDPath: string = "m/44'/60'/0'/0/";
@@ -57,6 +65,7 @@ export class WalletService {
         this.distributionRepository = new DistributionRepository(AppDataSource);
         this.fundAllocationService = new FundAllocationService();
         this.donationHandlerService = new DonationHandlerService();
+        this.distributionFeeService = new DistributionFeeService();
         this.graphQLService = new ImpactGraphService();
 
         this.seedPhrase = config.blockchain.seedPhrase;
@@ -130,17 +139,20 @@ export class WalletService {
             };
         }
 
-        if (balance <= 1000) {
-            // If balance <= 1000 tokens, distribute 100% of remaining funds
+        const balanceThreshold = config.blockchain.distributionBalanceThreshold;
+
+        if (balance <= balanceThreshold) {
+            // If balance <= threshold tokens, distribute 100% of remaining funds
             return {
                 amount: balance,
-                strategy: '100% distribution (low balance)'
+                strategy: `100% distribution (low balance - threshold: ${balanceThreshold})`
             };
         } else {
-            // Otherwise, use standard 5% distribution
+            // Otherwise, use configurable standard distribution percentage
+            const distributionPercentage = config.blockchain.distributionPercentage;
             return {
-                amount: balance * 0.05,
-                strategy: '5% distribution (standard)'
+                amount: balance * (distributionPercentage / 100),
+                strategy: `${distributionPercentage}% distribution (standard)`
             };
         }
     }
@@ -158,7 +170,7 @@ export class WalletService {
      * @param floorFactor Floor factor for minimum distribution (default 0.25 = 25%)
      * @returns Distribution result with transaction details
      */
-    async distributeFunds(walletAddress: string, projects: Project[], causeId: number, floorFactor: number = 0.25): Promise<DistributionResult> {
+    async distributeFunds(walletAddress: string, projects: Project[], causeId: number, causeOwnerAddress: string, floorFactor: number = 0.25): Promise<DistributionResult> {
         try {
             if (projects.length === 0) {
                 throw new Error("No projects to distribute funds to");
@@ -265,13 +277,29 @@ export class WalletService {
                 }
             }
 
-            console.log("Distribution calculations:", distributionCalculations.map((calc: any) => ({
+            console.log("Original distribution calculations:", distributionCalculations.map((calc: any) => ({
                 project: calc.project.name,
                 rank: calc.rank,
                 score: calc.project.score,
                 invertedExponentialRank: calc.invertedExponentialRank,
                 finalAmount: calc.finalAmount,
                 percentage: calc.percentage
+            })));
+
+            // Adjust project amounts to account for fees (cause owner 3%, GIVgarden 5%)
+            const adjustedProjectAmounts = this.distributionFeeService.adjustProjectAmountsForFees(
+                distributionCalculations.map(calc => ({
+                    project: calc.project,
+                    amount: calc.finalAmount
+                })),
+                tokenAmountToDistribute
+            );
+
+            console.log("Adjusted distribution calculations with fees:", adjustedProjectAmounts.map((item: any) => ({
+                project: item.project.name,
+                originalAmount: distributionCalculations.find(calc => calc.project.name === item.project.name)?.finalAmount,
+                adjustedAmount: item.amount,
+                percentage: (item.amount / tokenAmountToDistribute) * 100
             })));
 
             const transactions: Array<{
@@ -288,20 +316,18 @@ export class WalletService {
             let successCount = 0;
             let failureCount = 0;
 
-            // Prepare donation recipients for batch processing
-            const recipients: DonationRecipient[] = [];
+            // Create all recipients including cause owner and GIVgarden fees
+            const recipients = this.distributionFeeService.createAllRecipients(
+                tokenAmountToDistribute,
+                causeOwnerAddress,
+                adjustedProjectAmounts
+            );
 
-            // Collect all distributions for batch processing
-            for (const calculation of distributionCalculations) {
-                recipients.push({
-                    address: calculation.project.walletAddress,
-                    amount: calculation.finalAmount.toString(),
-                    data: '0x' // Empty data for now
-                });
-
+            // Prepare project distribution details for tracking
+            for (const item of adjustedProjectAmounts) {
                 projectsDistributionDetails.push({
-                    project: calculation.project,
-                    amount: calculation.finalAmount.toString()
+                    project: item.project,
+                    amount: item.amount.toString()
                 });
             }
 
@@ -410,6 +436,12 @@ export class WalletService {
                 console.log(`Capping distributed amount to ${cappedAmount.toFixed(4)} to match available balance`);
             }
 
+            // Calculate fee breakdown for the result
+            const feeBreakdown = this.distributionFeeService.calculateDistributionWithFees(
+                tokenAmountToDistribute,
+                causeOwnerAddress
+            ).breakdown;
+
             const distributionResult = {
                 walletAddress: wallet.address,
                 totalBalance: balance,
@@ -421,7 +453,8 @@ export class WalletService {
                     successCount,
                     failureCount,
                 },
-                projectsDistributionDetails
+                projectsDistributionDetails,
+                feeBreakdown
             };
 
             // Only proceed with notifications if we have successful transactions
@@ -432,14 +465,19 @@ export class WalletService {
                     console.log(`Distribution saved to database with ID: ${savedDistribution.id}`);
 
                     // Sync to GraphQL endpoint
-                    if (projectsDistributionDetails.length > 0) {
+                    if (projectsDistributionDetails.length > 0 || distributionResult.feeBreakdown) {
                         try {
-                            const graphqlResult = await this.graphQLService.syncDistributionData(projectsDistributionDetails, causeId);
+                            const distributionData = {
+                                projectsDistributionDetails,
+                                feeBreakdown: distributionResult.feeBreakdown!
+                            };
+                            
+                            const graphqlResult = await this.graphQLService.syncDistributionData(distributionData, causeId);
                             
                             if (graphqlResult.success) {
                                 await this.distributionRepository.updateGraphQLSyncStatus(savedDistribution.id, 'completed');
                                 await this.distributionRepository.updateProjectSharesGraphQLSyncStatus(savedDistribution.id, 'completed');
-                                console.log(`Distribution data synced to GraphQL successfully. Updated ${graphqlResult.data?.length || 0} records.`);
+                                console.log(`Distribution data synced to GraphQL successfully.`);
                             } else {
                                 await this.distributionRepository.updateGraphQLSyncStatus(savedDistribution.id, 'failed', graphqlResult.error);
                                 await this.distributionRepository.updateProjectSharesGraphQLSyncStatus(savedDistribution.id, 'failed', graphqlResult.error);
@@ -470,6 +508,12 @@ export class WalletService {
                             await this.discordService.initialize();
                         }
                         
+                        // Calculate fee breakdown for Discord notification
+                        const feeBreakdown = this.distributionFeeService.calculateDistributionWithFees(
+                            tokenAmountToDistribute,
+                            causeOwnerAddress
+                        ).breakdown;
+
                         const notification: DistributionNotification = {
                             walletAddress: distributionResult.walletAddress,
                             totalBalance: distributionResult.totalBalance,
@@ -481,6 +525,7 @@ export class WalletService {
                             projectsDistributionDetails: distributionResult.projectsDistributionDetails,
                             transactions: distributionResult.transactions,
                             causeId,
+                            feeBreakdown,
                         };
                         
                         await this.discordService.sendDistributionNotification(notification);

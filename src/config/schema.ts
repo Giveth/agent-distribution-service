@@ -20,6 +20,14 @@ export interface BlockchainConfig {
   chainId: number;
   tokenAddress: string;
   donationHandlerAddress: string;
+  givgardenAddress: string; // GIVgarden address for fee distribution
+  distributionPercentages: {
+    causeOwner: number; // Percentage for cause owner (default: 3)
+    givgarden: number; // Percentage for GIVgarden (default: 5)
+    projects: number; // Percentage for projects (default: 92)
+  };
+  distributionBalanceThreshold: number; // Balance threshold for 100% distribution (default: 1000)
+  distributionPercentage: number; // Percentage for standard distribution (default: 5)
 }
 
 export interface FeeRefillerConfig {

@@ -45,6 +45,14 @@ export const config: AppConfig = {
     chainId: Number(process.env.CHAIN_ID) || baseConfig.blockchain.chainId,
     tokenAddress: process.env.TOKEN_ADDRESS || baseConfig.blockchain.tokenAddress,
     donationHandlerAddress: process.env.DONATION_HANDLER_ADDRESS || baseConfig.blockchain.donationHandlerAddress,
+    givgardenAddress: process.env.GIVGARDEN_ADDRESS || baseConfig.blockchain.givgardenAddress,
+    distributionPercentages: {
+      causeOwner: Number(process.env.DISTRIBUTION_CAUSE_OWNER_PERCENTAGE) || baseConfig.blockchain.distributionPercentages.causeOwner,
+      givgarden: Number(process.env.DISTRIBUTION_GIVGARDEN_PERCENTAGE) || baseConfig.blockchain.distributionPercentages.givgarden,
+      projects: Number(process.env.DISTRIBUTION_PROJECTS_PERCENTAGE) || baseConfig.blockchain.distributionPercentages.projects,
+    },
+    distributionBalanceThreshold: Number(process.env.DISTRIBUTION_BALANCE_THRESHOLD) || baseConfig.blockchain.distributionBalanceThreshold,
+    distributionPercentage: Number(process.env.DISTRIBUTION_PERCENTAGE) || baseConfig.blockchain.distributionPercentage,
   },
   feeRefiller: {
     privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || baseConfig.feeRefiller.privateKey,

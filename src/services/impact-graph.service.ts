@@ -9,6 +9,16 @@ export interface UpdateCauseProjectDistributionInput {
     amountReceivedUsdValue: number;
 }
 
+export interface UpdateCauseDistributionInput {
+    causeId: number;
+    causeOwnerAmount: number;
+    causeOwnerAmountUsdValue: number;
+    givgardenAmount: number;
+    givgardenAmountUsdValue: number;
+    totalAmount: number;
+    totalAmountUsdValue: number;
+}
+
 export interface BulkUpdateCauseProjectDistributionResponse {
     id: string;
     causeId: number;
@@ -30,6 +40,26 @@ export interface GraphQLResponse<T> {
     }>;
 }
 
+export interface DistributionData {
+    projectsDistributionDetails: Array<{
+        project: Project;
+        amount: string;
+    }>;
+    feeBreakdown: {
+        causeOwnerAmount: string;
+        givgardenAmount: string;
+        projectsAmount: string;
+        totalAmount: string;
+    };
+}
+
+export interface CompleteDistributionUpdateInput {
+    causeId: number;
+    projects: UpdateCauseProjectDistributionInput[];
+    feeBreakdown: UpdateCauseDistributionInput;
+}
+
+
 export class ImpactGraphService {
     private endpoint: string;
     private coinGeckoService: CoinGeckoService;
@@ -43,12 +73,12 @@ export class ImpactGraphService {
     }
 
     /**
-     * Convert distribution data to GraphQL input format
+     * Convert distribution data to GraphQL input format for projects
      * @param projectsDistributionDetails Array of project distribution details
      * @param causeId Cause ID
      * @returns Array of UpdateCauseProjectDistributionInput objects
      */
-    private async convertToGraphQLInput(
+    private async convertProjectsToGraphQLInput(
         projectsDistributionDetails: Array<{
             project: Project;
             amount: string;
@@ -72,30 +102,60 @@ export class ImpactGraphService {
     }
 
     /**
-     * Send bulk update mutation to GraphQL endpoint
-     * @param updates Array of distribution updates
+     * Convert fee breakdown data to GraphQL input format
+     * @param feeBreakdown Fee breakdown data
+     * @param causeId Cause ID
+     * @returns UpdateCauseDistributionInput object
+     */
+    private async convertFeeBreakdownToGraphQLInput(
+        feeBreakdown: {
+            causeOwnerAmount: string;
+            givgardenAmount: string;
+            projectsAmount: string;
+            totalAmount: string;
+        },
+        causeId: number
+    ): Promise<UpdateCauseDistributionInput> {
+        // Get current distribution token price
+        const tokenPrice = await this.coinGeckoService.getTokenPrice();
+        
+        const causeOwnerAmount = parseFloat(feeBreakdown.causeOwnerAmount);
+        const givgardenAmount = parseFloat(feeBreakdown.givgardenAmount);
+        const totalAmount = parseFloat(feeBreakdown.totalAmount);
+        
+        return {
+            causeId,
+            causeOwnerAmount,
+            causeOwnerAmountUsdValue: causeOwnerAmount * tokenPrice,
+            givgardenAmount,
+            givgardenAmountUsdValue: givgardenAmount * tokenPrice,
+            totalAmount,
+            totalAmountUsdValue: totalAmount * tokenPrice
+        };
+    }
+
+    /**
+     * Send complete distribution update mutation to GraphQL endpoint
+     * @param update Complete distribution update including projects and fee breakdown
      * @returns GraphQL response
      */
-    async bulkUpdateCauseProjectDistribution(
-        updates: UpdateCauseProjectDistributionInput[]
+    async updateCompleteDistribution(
+        update: CompleteDistributionUpdateInput
     ): Promise<GraphQLResponse<{
-        bulkUpdateCauseProjectDistribution: BulkUpdateCauseProjectDistributionResponse[];
+        updateCompleteDistribution: {
+            success: boolean;
+        };
     }>> {
         const mutation = `
-            mutation ($updates: [UpdateCauseProjectDistributionInput!]!) {
-                bulkUpdateCauseProjectDistribution(updates: $updates) {
-                    id
-                    causeId
-                    projectId
-                    amountReceived
-                    amountReceivedUsdValue
-                    causeScore
+            mutation ($update: CompleteDistributionUpdateInput!) {
+                updateCompleteDistribution(update: $update) {
+                    success
                 }
             }
         `;
 
         const variables = {
-            updates
+            update
         };
 
         try {
@@ -123,30 +183,31 @@ export class ImpactGraphService {
     }
 
     /**
-     * Sync distribution data to GraphQL endpoint
-     * @param projectsDistributionDetails Array of project distribution details
+     * Sync distribution data to GraphQL endpoint using single call
+     * @param distributionData Complete distribution data including projects and fee breakdown
      * @param causeId Cause ID
      * @returns Success status and response data
      */
-    async syncDistributionData(projectsDistributionDetails: Array<{
-        project: Project;
-        amount: string;
-    }>, causeId: number): Promise<{
+    async syncDistributionData(distributionData: DistributionData, causeId: number): Promise<{
         success: boolean;
-        data?: BulkUpdateCauseProjectDistributionResponse[];
         error?: string;
     }> {
         try {
-            const updates = await this.convertToGraphQLInput(projectsDistributionDetails, causeId);
+            // Convert projects data
+            const projectUpdates = await this.convertProjectsToGraphQLInput(distributionData.projectsDistributionDetails, causeId);
             
-            if (updates.length === 0) {
-                return {
-                    success: true,
-                    data: []
-                };
-            }
-
-            const response = await this.bulkUpdateCauseProjectDistribution(updates);
+            // Convert fee breakdown data
+            const feeBreakdownUpdate = await this.convertFeeBreakdownToGraphQLInput(distributionData.feeBreakdown, causeId);
+            
+            // Prepare complete update
+            const completeUpdate: CompleteDistributionUpdateInput = {
+                causeId,
+                projects: projectUpdates,
+                feeBreakdown: feeBreakdownUpdate
+            };
+            
+            // Send single GraphQL call
+            const response = await this.updateCompleteDistribution(completeUpdate);
 
             if (response.errors && response.errors.length > 0) {
                 const errorMessage = response.errors.map(error => error.message).join(', ');
@@ -157,8 +218,7 @@ export class ImpactGraphService {
             }
 
             return {
-                success: true,
-                data: response.data?.bulkUpdateCauseProjectDistribution || []
+                success: response.data?.updateCompleteDistribution?.success || false
             };
         } catch (error) {
             return {
