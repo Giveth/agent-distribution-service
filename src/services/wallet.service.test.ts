@@ -3,6 +3,7 @@ import { WalletService } from './wallet.service';
 import { Project } from './fund-allocation.service';
 import { ethers } from 'ethers';
 import sinon from 'sinon';
+import { config } from '../config';
 
 describe('WalletService', () => {
   let service: WalletService;
@@ -188,7 +189,7 @@ describe('WalletService', () => {
   describe('distributeFunds', () => {
     it('should throw error when no projects provided', async () => {
       try {
-        await service.distributeFunds('0x1234567890123456789012345678901234567890', [], 1090);
+        await service.distributeFunds('0x1234567890123456789012345678901234567890', [], 1090, '0x1234567890123456789012345678901234567890');
         expect.fail('Should have thrown an error');
       } catch (err: any) {
         expect(err.message).to.equal('Failed to distribute funds: No projects to distribute funds to');
@@ -203,7 +204,7 @@ describe('WalletService', () => {
       ];
 
       try {
-        await service.distributeFunds('0x1234567890123456789012345678901234567890', projects, 1090);
+        await service.distributeFunds('0x1234567890123456789012345678901234567890', projects, 1090, '0x1234567890123456789012345678901234567890');
         expect.fail('Should have thrown an error');
       } catch (err: any) {
         expect(err.message).to.equal('Failed to distribute funds: Wallet 0x1234567890123456789012345678901234567890 not found in database');
@@ -308,6 +309,37 @@ describe('WalletService - Balance Conditional Logic', () => {
                 expect(result.amount).to.equal(expectedAmount);
                 expect(result.strategy).to.equal(expectedStrategy);
             });
+        });
+    });
+
+    describe('configurable distribution percentage', () => {
+        it('should use configurable percentage from config', () => {
+            const balance = 5000;
+            const result = service['calculateDistributionAmount'](balance);
+            
+            // Should use configurable percentage instead of hardcoded 5%
+            const expectedPercentage = config.blockchain.distributionPercentage;
+            const expectedAmount = balance * (expectedPercentage / 100);
+            
+            expect(result.amount).to.equal(expectedAmount);
+            expect(result.strategy).to.include(`${expectedPercentage}% distribution (standard)`);
+        });
+
+        it('should use configurable balance threshold', () => {
+            const balance = 500;
+            const result = service['calculateDistributionAmount'](balance);
+            
+            const balanceThreshold = config.blockchain.distributionBalanceThreshold;
+            
+            if (balance <= balanceThreshold) {
+                expect(result.amount).to.equal(balance);
+                expect(result.strategy).to.include(`100% distribution (low balance - threshold: ${balanceThreshold})`);
+            } else {
+                const expectedPercentage = config.blockchain.distributionPercentage;
+                const expectedAmount = balance * (expectedPercentage / 100);
+                expect(result.amount).to.equal(expectedAmount);
+                expect(result.strategy).to.include(`${expectedPercentage}% distribution (standard)`);
+            }
         });
     });
 });

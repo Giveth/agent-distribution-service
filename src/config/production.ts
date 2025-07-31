@@ -21,6 +21,14 @@ export const productionConfig: AppConfig = {
     chainId: 137, // Polygon mainnet
     tokenAddress: "0xc7B1807822160a8C5b6c9EaF5C584aAD0972deeC", // GIV token address
     donationHandlerAddress: "0x6e349c56f512cb4250276bf36335c8dd618944a1", // Donation handler contract address
+    givgardenAddress: "0xd10BAC02a02747cB293972f99981F4Faf78E1626", // GIVgarden address for production
+    distributionPercentages: {
+      causeOwner: 3, // 3% for cause owner
+      givgarden: 5, // 5% for GIVgarden
+      projects: 92, // 92% for projects
+    },
+    distributionBalanceThreshold: 100, // Balance threshold for 100% distribution
+    distributionPercentage: 5, // Percentage for standard distribution
   },
   feeRefiller: {
     privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || "",

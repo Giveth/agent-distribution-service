@@ -66,6 +66,7 @@ interface DistributeFundsRequest {
   walletAddress: string;
   projects: Project[];
   causeId: number;
+  causeOwnerAddress: string; // Address of the cause owner for fee distribution
 }
 
 // Add JSON parsing middleware
@@ -124,9 +125,9 @@ router.post(
   async (req: Request<{}, {}, DistributeFundsRequest>, res: Response) => {
     try {
       console.log("Distribute funds endpoint hit");
-      const { walletAddress, projects, causeId } = req.body;
+      const { walletAddress, projects, causeId, causeOwnerAddress } = req.body;
       
-      const result = await walletService.distributeFunds(walletAddress, projects, causeId);
+      const result = await walletService.distributeFunds(walletAddress, projects, causeId, causeOwnerAddress);
       
       // Check if the distribution was successful
       const isSuccessful = result.summary.successCount > 0 && result.summary.failureCount === 0;

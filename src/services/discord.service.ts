@@ -29,6 +29,12 @@ export interface DistributionNotification {
     transactionHash?: string;
   }>;
   causeId?: number;
+  feeBreakdown?: {
+    causeOwnerAmount: string;
+    givgardenAmount: string;
+    projectsAmount: string;
+    totalAmount: string;
+  };
 }
 
 export interface DistributionFailureNotification {
@@ -496,10 +502,24 @@ export class DiscordService {
       embed.addFields({ name: 'Cause ID', value: notification.causeId.toString(), inline: true });
     }
 
+    // Add fee breakdown if available
+    if (notification.feeBreakdown) {
+      const causeOwnerPercentage = config.blockchain.distributionPercentages.causeOwner;
+      const givgardenPercentage = config.blockchain.distributionPercentages.givgarden;
+      const projectsPercentage = config.blockchain.distributionPercentages.projects;
+      
+      embed.addFields(
+        { name: '💰 Fee Breakdown', value: 'Distribution includes fees for cause owner and GIVgarden', inline: false },
+        { name: `Cause Owner (${causeOwnerPercentage}%)`, value: `${notification.feeBreakdown.causeOwnerAmount} GIV`, inline: true },
+        { name: `GIVgarden (${givgardenPercentage}%)`, value: `${notification.feeBreakdown.givgardenAmount} GIV`, inline: true },
+        { name: `Projects (${projectsPercentage}%)`, value: `${notification.feeBreakdown.projectsAmount} GIV`, inline: true }
+      );
+    }
+
     // Add top recipients
     const topRecipients = notification.projectsDistributionDetails
       .slice(0, 5)
-      .map(detail => `${detail.project.name}: ${detail.amount} POL`)
+      .map(detail => `${detail.project.name}: ${detail.amount} GIV`)
       .join('\n');
 
     if (topRecipients) {

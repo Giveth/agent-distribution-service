@@ -231,17 +231,64 @@ The system uses a specialized donation handler contract for secure and efficient
 
 ## Configuration
 
-### Fee Refiller Settings
+The system supports various configuration options through environment variables and config files:
 
-- **FEE_REFILLER_PRIVATE_KEY**: Private key of the wallet that will refill fees
-- **FEE_REFILL_FACTOR**: Multiplier for fee amount (default: 1.5 = 50% extra)
+### Blockchain Configuration
 
-### Environment Variables
+- `SEED_PHRASE`: Seed phrase for HD wallet generation
+- `RPC_URL`: RPC endpoint URL
+- `CHAIN_ID`: Blockchain chain ID
+- `TOKEN_ADDRESS`: Distribution token address
+- `DONATION_HANDLER_ADDRESS`: Donation handler contract address
+- `GIVGARDEN_ADDRESS`: GIVgarden address for fee distribution
+- `CAUSE_OWNER_ADDRESS`: Default cause owner address (optional)
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `FEE_REFILLER_PRIVATE_KEY` | Private key for fee refiller wallet | Required |
-| `FEE_REFILL_FACTOR` | Fee refill multiplier | 1.5 |
+### Distribution Configuration
+
+The system now supports configurable distribution percentages and minimum amounts:
+
+#### Distribution Percentages
+- `DISTRIBUTION_CAUSE_OWNER_PERCENTAGE`: Percentage for cause owner (default: 3)
+- `DISTRIBUTION_GIVGARDEN_PERCENTAGE`: Percentage for GIVgarden (default: 5)
+- `DISTRIBUTION_PROJECTS_PERCENTAGE`: Percentage for projects (default: 92)
+
+#### Distribution Balance Threshold
+- `DISTRIBUTION_BALANCE_THRESHOLD`: Balance threshold for 100% distribution (default: 1000)
+- `DISTRIBUTION_PERCENTAGE`: Percentage for standard distribution (default: 5)
+
+### Fee Refiller Configuration
+
+- `FEE_REFILLER_PRIVATE_KEY`: Private key for fee refiller wallet
+- `FEE_REFILL_FACTOR`: Multiplier for fee amount (default: 1.5)
+- `FEE_REFILLER_MINIMUM_BALANCE`: Minimum balance threshold
+
+### Discord Configuration
+
+- `DISCORD_BOT_TOKEN`: Discord bot token
+- `DISCORD_CHANNEL_ID`: Channel ID for notifications
+- `DISCORD_GUILD_ID`: Guild ID
+- `DISCORD_ALERT_CHANNEL_ID`: Alert channel ID
+- `DISCORD_FEE_THRESHOLD`: Fee threshold for alerts
+- `DISCORD_ALERT_USERS`: Comma-separated user IDs for alerts
+- `DISCORD_BALANCE_CHECK_CRON`: Cron schedule for balance checks
+
+### Database Configuration
+
+- `DB_HOST`: Database host
+- `DB_PORT`: Database port
+- `DB_USER`: Database username
+- `DB_PASSWORD`: Database password
+- `DB_NAME`: Database name
+
+### Server Configuration
+
+- `PORT`: Server port
+- `HOST`: Server host
+- `ALLOWED_IPS`: Comma-separated allowed IP addresses
+
+### Other Configuration
+
+- `IMPACT_GRAPH_URL`: Impact Graph GraphQL endpoint URL
 
 ## Benefits
 
