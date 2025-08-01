@@ -52,4 +52,30 @@ export class WalletRepository {
       throw error;
     }
   }
+
+  async getHighestIndex(): Promise<number> {
+    try {
+      const wallets = await this.repository.find();
+      if (wallets.length === 0) {
+        return -1; // No wallets exist, so next index should be 0
+      }
+
+      let highestIndex = -1;
+      for (const wallet of wallets) {
+        // Extract index from hdPath like "m/44'/60'/0'/0/123"
+        const match = wallet.hdPath.match(/\/(\d+)$/);
+        if (match) {
+          const index = parseInt(match[1], 10);
+          if (index > highestIndex) {
+            highestIndex = index;
+          }
+        }
+      }
+
+      return highestIndex;
+    } catch (error) {
+      console.error('Error getting highest index:', error);
+      throw error;
+    }
+  }
 } 

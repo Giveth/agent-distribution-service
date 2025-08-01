@@ -1,6 +1,6 @@
 services:
   agent-distribution-service:
-    image: ghcr.io/giveth/agent-distribution-service:staging
+    image: ghcr.io/giveth/agent-distribution-service:latest
     container_name: agent-distribution-service
     ports:
       - "3000:3000"
@@ -17,7 +17,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-      
+
 networks:
   agent-distribution-service:
     external: true

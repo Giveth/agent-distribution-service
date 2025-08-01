@@ -160,4 +160,57 @@ describe('WalletRepository', () => {
       }
     });
   });
+
+  describe('getHighestIndex', () => {
+    it('should return -1 when no wallets exist', async () => {
+      mockRepository.find.resolves([]);
+
+      const result = await repository.getHighestIndex();
+
+      expect(result).to.equal(-1);
+      expect(mockRepository.find.called).to.be.true;
+    });
+
+    it('should return highest index from existing wallets', async () => {
+      const wallets = [
+        { address: '0x123', hdPath: "m/44'/60'/0'/0/0" },
+        { address: '0x456', hdPath: "m/44'/60'/0'/0/5" },
+        { address: '0x789', hdPath: "m/44'/60'/0'/0/2" },
+      ];
+
+      mockRepository.find.resolves(wallets);
+
+      const result = await repository.getHighestIndex();
+
+      expect(result).to.equal(5);
+      expect(mockRepository.find.called).to.be.true;
+    });
+
+    it('should handle wallets with invalid hdPath format', async () => {
+      const wallets = [
+        { address: '0x123', hdPath: "m/44'/60'/0'/0/0" },
+        { address: '0x456', hdPath: "invalid-path" },
+        { address: '0x789', hdPath: "m/44'/60'/0'/0/3" },
+      ];
+
+      mockRepository.find.resolves(wallets);
+
+      const result = await repository.getHighestIndex();
+
+      expect(result).to.equal(3);
+      expect(mockRepository.find.called).to.be.true;
+    });
+
+    it('should throw error when find fails', async () => {
+      const error = new Error('Find failed');
+      mockRepository.find.rejects(error);
+
+      try {
+        await repository.getHighestIndex();
+        expect.fail('Should have thrown an error');
+      } catch (err) {
+        expect(err).to.equal(error);
+      }
+    });
+  });
 }); 
