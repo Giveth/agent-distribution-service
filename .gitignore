@@ -56,6 +56,5 @@ temp/
 .temp/
 .tmp/ 
 
-certs/
 *.crt
 CLAUDE.md

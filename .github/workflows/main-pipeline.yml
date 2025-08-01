@@ -1,12 +1,12 @@
-name: staging-pipeline
+name: main-pipeline
 
 on:
   push:
     branches:
-      - staging
+      - main
   pull_request:
     branches:
-      - staging
+      - main
 
 jobs:
   lint:
@@ -15,7 +15,7 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
         with:
-          ref: staging
+          ref: main
           fetch-depth: 0
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -48,7 +48,7 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
         with:
-          ref: staging
+          ref: main
           fetch-depth: 0
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -87,7 +87,7 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
         with:
-          ref: staging
+          ref: main
           fetch-depth: 0
       - name: Login to GitHub Container Registry
         run: echo ${{ secrets.GITHUB_TOKEN }} | docker login ghcr.io -u ${{ github.actor }} --password-stdin
@@ -98,7 +98,7 @@ jobs:
           no-cache: true
           repository: giveth/agent-distribution-service
           tags: |
-            ghcr.io/giveth/agent-distribution-service:staging
+            ghcr.io/giveth/agent-distribution-service:latest
 
   deploy:
     needs: publish
@@ -107,17 +107,17 @@ jobs:
       - name: SSH and Redeploy
         uses: appleboy/ssh-action@v1.0.0
         with:
-          host: ${{ secrets.STAGING_HOST }}
-          username: ${{ secrets.STAGING_USERNAME }}
-          key: ${{ secrets.STAGING_PRIVATE_KEY }}
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
             cd agent-distribution-service
-            git checkout staging
+            git checkout main
             git pull
-            docker compose -f docker-compose-staging.yml down
-            docker compose -f docker-compose-staging.yml pull
-            docker compose -f docker-compose-staging.yml up -d agent-distribution-service
+            docker compose -f docker-compose-production.yml down
+            docker compose -f docker-compose-production.yml pull
+            docker compose -f docker-compose-production.yml up -d agent-distribution-service
             docker image prune -a --force
             sleep 20
             docker logs agent-distribution-service
