@@ -23,12 +23,80 @@ export class FeeRefillerService {
   private refillFactor: number;
   private minimumBalance: bigint;
   private discordService: DiscordService | null = null;
+  private nonceCache: Map<string, number> = new Map();
 
   constructor() {
     this.provider = new ethers.JsonRpcProvider(config.blockchain.rpcUrl);
     this.refillerWallet = new ethers.Wallet(config.feeRefiller.privateKey, this.provider);
     this.refillFactor = config.feeRefiller.refillFactor;
     this.minimumBalance = ethers.parseEther(config.feeRefiller.minimumBalance);
+    
+    // Initialize Discord service if configured
+    if (config.discord.botToken && config.discord.channelId) {
+      this.discordService = new DiscordService();
+    }
+  }
+
+  /**
+   * Get the current nonce for the refiller wallet with proper management
+   * @returns The current nonce
+   */
+  private async getRefillerNonce(): Promise<number> {
+    try {
+      const currentNonce = await this.provider.getTransactionCount(this.refillerWallet.address, 'latest');
+      const cachedNonce = this.nonceCache.get(this.refillerWallet.address) || 0;
+      
+      // Use the higher of cached or current nonce to prevent conflicts
+      const nonce = Math.max(currentNonce, cachedNonce);
+      
+      // Update cache
+      this.nonceCache.set(this.refillerWallet.address, nonce + 1);
+      
+      console.log(`Refiller nonce: current=${currentNonce}, cached=${cachedNonce}, using=${nonce}`);
+      
+      return nonce;
+    } catch (error) {
+      console.error(`Failed to get refiller nonce:`, error);
+      throw new Error(`Failed to get refiller nonce: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Refill multiple wallets in sequence to prevent nonce conflicts
+   * @param refillRequests Array of refill requests
+   * @returns Array of refill results
+   */
+  async refillMultipleWallets(refillRequests: Array<{ walletAddress: string; estimatedFee: bigint }>): Promise<FeeRefillResult[]> {
+    const results: FeeRefillResult[] = [];
+    
+    for (const request of refillRequests) {
+      try {
+        console.log(`Processing refill for ${request.walletAddress}...`);
+        const result = await this.refillPool(request.walletAddress, request.estimatedFee);
+        results.push(result);
+        
+        // Add small delay between refills to prevent nonce conflicts
+        if (refillRequests.indexOf(request) < refillRequests.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      } catch (error) {
+        console.error(`Failed to refill ${request.walletAddress}:`, error);
+        results.push({
+          success: false,
+          error: `Failed to refill wallet: ${error instanceof Error ? error.message : 'Unknown error'}`
+        });
+      }
+    }
+    
+    return results;
+  }
+
+  /**
+   * Clear the nonce cache for the refiller wallet
+   */
+  private clearRefillerNonceCache(): void {
+    this.nonceCache.delete(this.refillerWallet.address);
+    console.log('Cleared refiller nonce cache');
   }
 
   /**
@@ -236,11 +304,44 @@ export class FeeRefillerService {
         };
       }
 
-      // Send POL to wallet address
-      const tx = await this.refillerWallet.sendTransaction({
-        to: walletAddress,
-        value: refillAmount
-      });
+      // Get current nonce for refiller wallet
+      const nonce = await this.getRefillerNonce();
+
+      // Send POL to wallet address with explicit nonce
+      let tx;
+      try {
+        tx = await this.refillerWallet.sendTransaction({
+          to: walletAddress,
+          value: refillAmount,
+          nonce: nonce
+        });
+      } catch (sendError) {
+        // If it's a nonce conflict, try with higher gas price
+        if (sendError instanceof Error && sendError.message.includes('could not replace existing tx')) {
+          console.warn('Refiller nonce conflict detected, retrying with higher gas price...');
+          
+          // Get current gas price and increase by 20%
+          const feeData = await this.provider.getFeeData();
+          const currentGasPrice = feeData.gasPrice || ethers.parseUnits('30', 'gwei');
+          const higherGasPrice = (currentGasPrice * 120n) / 100n;
+          
+          console.log('Retrying refill with higher gas price:', {
+            originalGasPrice: ethers.formatUnits(currentGasPrice, 'gwei') + ' gwei',
+            newGasPrice: ethers.formatUnits(higherGasPrice, 'gwei') + ' gwei'
+          });
+          
+          tx = await this.refillerWallet.sendTransaction({
+            to: walletAddress,
+            value: refillAmount,
+            nonce: nonce,
+            gasPrice: higherGasPrice
+          });
+        } else {
+          // Clear nonce cache on error
+          this.clearRefillerNonceCache();
+          throw sendError;
+        }
+      }
 
       console.log(`Refill transaction sent: ${tx.hash}`);
 
@@ -253,6 +354,9 @@ export class FeeRefillerService {
         transactionHash: receipt?.hash || tx.hash
       };
     } catch (error) {
+      // Clear nonce cache on error
+      this.clearRefillerNonceCache();
+      
       return {
         success: false,
         error: `Failed to refill wallet: ${error instanceof Error ? error.message : 'Unknown error'}`
