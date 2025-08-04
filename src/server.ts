@@ -1,5 +1,6 @@
 import express, { Request, Response, Router } from "express";
 import { WalletService } from "./services/wallet.service";
+import { ParallelDistributionService } from "./services/parallel-distribution.service";
 import { DiscordService } from "./services/discord.service";
 import { CheckBalanceService } from "./services/cronjobs/check-balance.service";
 import { config } from "./config";
@@ -11,6 +12,7 @@ import { debugConfiguration, validateAddresses } from "./utils/config-validation
 const app = express();
 const router = Router();
 const walletService = new WalletService();
+const parallelDistributionService = new ParallelDistributionService();
 const discordService = new DiscordService();
 const checkBalanceService = new CheckBalanceService();
 
@@ -67,6 +69,14 @@ interface DistributeFundsRequest {
   projects: Project[];
   causeId: number;
   causeOwnerAddress: string; // Address of the cause owner for fee distribution
+}
+
+interface ParallelDistributeFundsRequest {
+  walletAddresses: string[];
+  projects: Project[];
+  causeId: number;
+  causeOwnerAddress: string; // Address of the cause owner for fee distribution
+  floorFactor?: number;
 }
 
 // Add JSON parsing middleware
@@ -178,6 +188,90 @@ router.post(
       }
     } catch (error) {
       console.error(`❌ Distribution endpoint error for ${req.body.walletAddress}:`, error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
+);
+
+// Distribute funds in parallel from multiple wallets
+router.post(
+  "/distribute-funds-parallel",
+  async (req: Request<{}, {}, ParallelDistributeFundsRequest>, res: Response) => {
+    try {
+      console.log("Parallel distribute funds endpoint hit");
+      const { walletAddresses, projects, causeId, causeOwnerAddress, floorFactor } = req.body;
+      
+      if (!walletAddresses || walletAddresses.length === 0) {
+        return res.status(400).json({
+          success: false,
+          error: "No wallet addresses provided"
+        });
+      }
+
+      console.log(`Starting parallel distribution for ${walletAddresses.length} wallets`);
+      
+      const results = await parallelDistributionService.distributeFundsInParallel({
+        walletAddresses,
+        projects,
+        causeId,
+        causeOwnerAddress,
+        floorFactor
+      });
+      
+      // Calculate summary statistics
+      const successfulDistributions = results.filter(r => r.success);
+      const failedDistributions = results.filter(r => !r.success);
+      const totalSuccessCount = successfulDistributions.length;
+      const totalFailureCount = failedDistributions.length;
+      
+      console.log(`Parallel distribution completed: ${totalSuccessCount}/${results.length} successful`);
+      
+      if (totalSuccessCount === results.length) {
+        // All distributions successful
+        console.log(`✅ All parallel distributions completed successfully`);
+        res.status(200).json({
+          success: true,
+          message: "All parallel distributions completed successfully",
+          data: {
+            totalWallets: results.length,
+            successfulDistributions: totalSuccessCount,
+            failedDistributions: totalFailureCount,
+            results
+          }
+        });
+      } else if (totalSuccessCount > 0) {
+        // Some distributions successful, some failed
+        console.log(`⚠️ Parallel distribution completed with some failures: ${totalSuccessCount}/${results.length} successful`);
+        res.status(207).json({
+          success: false,
+          message: "Parallel distribution completed with some failures",
+          data: {
+            totalWallets: results.length,
+            successfulDistributions: totalSuccessCount,
+            failedDistributions: totalFailureCount,
+            results
+          }
+        });
+      } else {
+        // All distributions failed
+        console.log(`❌ All parallel distributions failed`);
+        res.status(500).json({
+          success: false,
+          message: "All parallel distributions failed",
+          error: "No successful distributions",
+          data: {
+            totalWallets: results.length,
+            successfulDistributions: totalSuccessCount,
+            failedDistributions: totalFailureCount,
+            results
+          }
+        });
+      }
+    } catch (error) {
+      console.error(`❌ Parallel distribution endpoint error:`, error);
       res.status(500).json({
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
