@@ -30,11 +30,6 @@ export class FeeRefillerService {
     this.refillerWallet = new ethers.Wallet(config.feeRefiller.privateKey, this.provider);
     this.refillFactor = config.feeRefiller.refillFactor;
     this.minimumBalance = ethers.parseEther(config.feeRefiller.minimumBalance);
-    
-    // Initialize Discord service if configured
-    if (config.discord.botToken && config.discord.channelId) {
-      this.discordService = new DiscordService();
-    }
   }
 
   /**
