@@ -1,6 +1,7 @@
 import { developmentConfig } from './development';
 import { productionConfig } from './production';
 import { stagingConfig } from './staging';
+import { testConfig } from './test';
 import { AppConfig } from './schema';
 import dotenv from 'dotenv';
 
@@ -11,7 +12,16 @@ dotenv.config();
 const env = process.env.NODE_ENV || 'development';
 
 // Select the base configuration based on environment
-const baseConfig = env === 'production' ? productionConfig : env === 'staging' ? stagingConfig : developmentConfig;
+let baseConfig;
+if (env === 'production') {
+  baseConfig = productionConfig;
+} else if (env === 'staging') {
+  baseConfig = stagingConfig;
+} else if (env === 'test') {
+  baseConfig = testConfig;
+} else {
+  baseConfig = developmentConfig;
+}
 
 // Merge environment variables with the base configuration
 export const config: AppConfig = {
@@ -33,6 +43,32 @@ export const config: AppConfig = {
     seedPhrase: process.env.SEED_PHRASE || baseConfig.blockchain.seedPhrase,
     rpcUrl: process.env.RPC_URL || baseConfig.blockchain.rpcUrl,
     chainId: Number(process.env.CHAIN_ID) || baseConfig.blockchain.chainId,
+    tokenAddress: process.env.TOKEN_ADDRESS || baseConfig.blockchain.tokenAddress,
+    donationHandlerAddress: process.env.DONATION_HANDLER_ADDRESS || baseConfig.blockchain.donationHandlerAddress,
+    givgardenAddress: process.env.GIVGARDEN_ADDRESS || baseConfig.blockchain.givgardenAddress,
+    distributionPercentages: {
+      causeOwner: Number(process.env.DISTRIBUTION_CAUSE_OWNER_PERCENTAGE) || baseConfig.blockchain.distributionPercentages.causeOwner,
+      givgarden: Number(process.env.DISTRIBUTION_GIVGARDEN_PERCENTAGE) || baseConfig.blockchain.distributionPercentages.givgarden,
+      projects: Number(process.env.DISTRIBUTION_PROJECTS_PERCENTAGE) || baseConfig.blockchain.distributionPercentages.projects,
+    },
+    distributionBalanceThreshold: Number(process.env.DISTRIBUTION_BALANCE_THRESHOLD) || baseConfig.blockchain.distributionBalanceThreshold,
+    distributionPercentage: Number(process.env.DISTRIBUTION_PERCENTAGE) || baseConfig.blockchain.distributionPercentage,
+    minBalanceForDistribution: Number(process.env.MIN_BALANCE_FOR_DISTRIBUTION) || baseConfig.blockchain.minBalanceForDistribution,
   },
-  environment: env as 'development' | 'production',
+  feeRefiller: {
+    privateKey: process.env.FEE_REFILLER_PRIVATE_KEY || baseConfig.feeRefiller.privateKey,
+    refillFactor: Number(process.env.FEE_REFILL_FACTOR) || baseConfig.feeRefiller.refillFactor,
+    minimumBalance: process.env.FEE_REFILLER_MINIMUM_BALANCE || baseConfig.feeRefiller.minimumBalance,
+  },
+  discord: {
+    botToken: process.env.DISCORD_BOT_TOKEN || baseConfig.discord.botToken,
+    channelId: process.env.DISCORD_CHANNEL_ID || baseConfig.discord.channelId,
+    guildId: process.env.DISCORD_GUILD_ID || baseConfig.discord.guildId,
+    alertChannelId: process.env.DISCORD_ALERT_CHANNEL_ID || baseConfig.discord.alertChannelId,
+    feeThreshold: process.env.DISCORD_FEE_THRESHOLD || baseConfig.discord.feeThreshold,
+    alertUsers: process.env.DISCORD_ALERT_USERS ? process.env.DISCORD_ALERT_USERS.split(',') : baseConfig.discord.alertUsers,
+    balanceCheckCron: process.env.DISCORD_BALANCE_CHECK_CRON || baseConfig.discord.balanceCheckCron,
+  },
+  impactGraphUrl: process.env.IMPACT_GRAPH_URL || baseConfig.impactGraphUrl,
+  environment: env as 'development' | 'production' | 'test',
 }; 

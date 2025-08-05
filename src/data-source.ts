@@ -1,8 +1,8 @@
 import { DataSource } from "typeorm";
 import { Wallet } from "./entities/Wallet";
+import { Distribution, DistributionProjectShare } from "./entities/Distribution";
 import { config } from "./config";
 import path from "path";
-import fs from "fs";
 
 export const AppDataSource = new DataSource({
   type: "postgres",
@@ -13,12 +13,12 @@ export const AppDataSource = new DataSource({
   database: config.database.database,
   synchronize: config.database.synchronize,
   logging: config.database.logging,
-  entities: [Wallet],
+  entities: [Wallet, Distribution, DistributionProjectShare],
   migrations: [path.join(__dirname, "../migrations/*.{ts,js}")],
   migrationsRun: config.environment === "development",
   subscribers: [],
   ssl:
-    config.environment === "development"
+    config.environment === "development" || config.environment === "test"
       ? false
       : {
           rejectUnauthorized: false,
