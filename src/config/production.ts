@@ -27,8 +27,8 @@ export const productionConfig: AppConfig = {
       givgarden: 5, // 5% for GIVgarden
       projects: 92, // 92% for projects
     },
-    distributionBalanceThreshold: 100, // Balance threshold for 100% distribution
-    distributionPercentage: 5, // Percentage for standard distribution
+    distributionBalanceThreshold: 10, // Balance threshold for 100% distribution
+    distributionPercentage: 1, // Percentage for standard distribution
     minBalanceForDistribution: 0.1, // Minimum balance for distribution
   },
   feeRefiller: {
