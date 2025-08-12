@@ -230,6 +230,7 @@ export class DonationHandlerService {
                 gasLimit: gasLimit,
             };
 
+            console.log(`Sending single donation transaction with gas limit: ${gasLimit.toString()}`);
             const result = await this.transactionService.sendTransaction(transactionRequest, walletInfo.hdPath);
 
             console.log(`✅ Single donation transaction successful: ${result.transactionHash}`);
@@ -359,6 +360,7 @@ export class DonationHandlerService {
                 gasLimit: gasLimit,
             };
 
+            console.log(`Sending batch donation transaction with gas limit: ${gasLimit.toString()}`);
             const result = await this.transactionService.sendTransaction(transactionRequest, walletInfo.hdPath);
 
             console.log(`✅ Batch donation transaction successful: ${result.transactionHash}`);

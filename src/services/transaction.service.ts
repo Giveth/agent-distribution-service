@@ -117,10 +117,21 @@ export class TransactionService {
 
       console.log(`Estimated transaction fee: ${feeEstimate.estimatedFeeInPOL} POL`);
 
-      // Ensure wallet has sufficient balance for fees
+      // Determine the actual gas limit that will be used
+      const actualGasLimit = request.gasLimit || feeEstimate.gasLimit;
+      
+      // If a custom gas limit is provided, recalculate the fee using the actual gas limit
+      let actualTotalFee = feeEstimate.totalFee;
+      if (request.gasLimit && request.gasLimit !== feeEstimate.gasLimit) {
+        // Recalculate fee with the actual gas limit that will be used
+        actualTotalFee = actualGasLimit * feeEstimate.gasPrice;
+        console.log(`Custom gas limit provided. Recalculated fee: ${ethers.formatEther(actualTotalFee)} POL (Gas: ${actualGasLimit.toString()}, Price: ${ethers.formatUnits(feeEstimate.gasPrice, 'gwei')} gwei)`);
+      }
+
+      // Ensure wallet has sufficient balance for fees using the actual fee
       const refillResult = await this.feeRefillerService.ensureSufficientBalance(
         request.from,
-        feeEstimate.totalFee
+        actualTotalFee
       );
 
       if (!refillResult.success) {
@@ -132,7 +143,7 @@ export class TransactionService {
         to: request.to as `0x${string}`,
         data: request.data as `0x${string}`,
         value: request.value ? ethers.parseEther(request.value) : 0n,
-        gasLimit: request.gasLimit || feeEstimate.gasLimit, // Use custom gas limit if provided
+        gasLimit: actualGasLimit,
         gasPrice: feeEstimate.gasPrice,
         nonce: nonce // Explicit nonce to prevent conflicts
       };
