@@ -43,7 +43,7 @@ export interface DiscordConfig {
   guildId: string;
   alertChannelId?: string; // Optional channel for alerts
   feeThreshold: string; // Minimum balance threshold for fee provider wallet
-  alertUsers: string[]; // Array of user IDs to tag in alerts
+  alertUsers: string[]; // Array of user IDs to tag in alerts (get from discord profiles)
   balanceCheckCron: string; // Cron schedule for balance checks (default: '0 * * * *' - every hour)
 }
 
